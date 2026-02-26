@@ -1,0 +1,160 @@
+/* Vehicles.css - Спеціалізовані стилі для реєстру авто */
+
+.archive-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+}
+
+/* Шапка таблиці з пошуком та кнопкою */
+.table-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.table-header-actions h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+}
+
+/* Vehicles.css - Виправлена версія для ідеального вирівнювання */
+
+.controls-group {
+    display: flex;
+    gap: 15px;
+}
+
+/* Базовий стан інпуту */
+.search-input {
+    padding: 10px 15px;
+    background: #1E2A38;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: white;
+    width: 250px;
+    outline: none; /* Прибираємо стандартний синій контур браузера */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Плавний перехід */
+}
+
+/* Сучасний Focus ефект */
+.search-input:focus {
+    border-color: #00BFA5; /* Твій фірмовий бірюзовий */
+    background: #16202c; /* Трохи темніший фон при фокусі */
+    
+    /* Складна багатошарова тінь для ефекту глибини та світіння */
+    box-shadow: 
+        0 0 0 2px rgba(0, 191, 165, 0.1), /* Тонка зовнішня лінія */
+        0 8px 20px -8px rgba(0, 0, 0, 0.4), /* Основна тінь об'єму */
+        0 0 15px rgba(0, 191, 165, 0.3);    /* М'яке бірюзове світіння */
+    
+    width: 280px; /* Невелике розширення для динамічності */
+}
+
+/* Стиль для плейсхолдера */
+.search-input::placeholder {
+    color: #64748b;
+    transition: color 0.3s ease;
+}
+
+.search-input:focus::placeholder {
+    color: #94a3b8;
+}
+
+.add-btn {
+    background: #00BFA5;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.add-btn:hover { background: #009688; }
+
+
+/* Таблиця */
+.archive-card {
+    background-color: #1E2A38;
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.archive-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.archive-table th {
+    color: #00BFA5;
+    border-bottom: 2px solid #00BFA5;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 1rem;
+    text-align: center;
+}
+
+.archive-table td {
+    padding: 0 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    height: 51px; /* Твоя фіксована висота для ідеальної лінії */
+    color: #fff;
+    text-align: center;
+}
+
+.emp-name-bold { 
+    font-weight: 700; 
+}
+
+/* Стилізація номера як реального номерного знака */
+.plate-badge {
+    background: #fff;
+    color: #1E2A38;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-weight: 800;
+    border: 2px solid #334155;
+    letter-spacing: 1px;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-family: 'Courier New', monospace;
+}
+
+/* Комірка дій з кнопками */
+.actions-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    height: 51px; /* Має збігатися з висотою td */
+}
+
+.edit-icon, .delete-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.edit-icon:hover {
+    background-color: rgba(0, 191, 165, 0.1);
+    transform: translateY(-2px);
+}
+
+.delete-icon:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+    transform: translateY(-2px);
+}

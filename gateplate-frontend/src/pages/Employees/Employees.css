@@ -1,0 +1,351 @@
+/* Employees.css - Оптимізована версія */
+
+.archive-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+}
+
+.table-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.table-header-actions h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.controls-group {
+    display: flex;
+    gap: 15px;
+}
+
+/* Базовий стан інпуту */
+.search-input {
+    padding: 10px 15px;
+    background: #1E2A38;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: white;
+    width: 250px;
+    outline: none; /* Прибираємо стандартний синій контур браузера */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Плавний перехід */
+}
+
+/* Сучасний Focus ефект */
+.search-input:focus {
+    border-color: #00BFA5; /* Твій фірмовий бірюзовий */
+    background: #16202c; /* Трохи темніший фон при фокусі */
+    
+    /* Складна багатошарова тінь для ефекту глибини та світіння */
+    box-shadow: 
+        0 0 0 2px rgba(0, 191, 165, 0.1), /* Тонка зовнішня лінія */
+        0 8px 20px -8px rgba(0, 0, 0, 0.4), /* Основна тінь об'єму */
+        0 0 15px rgba(0, 191, 165, 0.3);    /* М'яке бірюзове світіння */
+    
+    width: 280px; /* Невелике розширення для динамічності */
+}
+
+/* Стиль для плейсхолдера */
+.search-input::placeholder {
+    color: #64748b;
+    transition: color 0.3s ease;
+}
+
+.search-input:focus::placeholder {
+    color: #94a3b8;
+}
+
+.add-btn {
+    background: #00BFA5;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.add-btn:hover { background: #009688; }
+
+.archive-card {
+    background-color: #1E2A38;
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.archive-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Налаштування курсору для рядків */
+.archive-table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.archive-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.archive-table th {
+    color: #00BFA5;
+    border-bottom: 1px solid #00BFA5;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 1rem;
+    text-align: center;
+}
+
+.archive-table td {
+    padding: 8px 1rem; /* Зменшений падінг для компактності */
+    vertical-align: middle;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    height: 51px; /* Хак для ідеального вирівнювання лінії */
+}
+
+.emp-name-bold { font-weight: 700; }
+
+.avatar-circle {
+    width: 50px;  /* Було 40px */
+    height: 50px; /* Було 40px */
+    background: #0A1F44;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    border: 1px solid #00BFA5;
+    overflow: hidden;
+}
+
+.employee-photo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Щоб обличчя не розтягувалося */
+}
+
+/* Комірка з кнопками дій */
+.actions-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    height: 100%; /* Заповнює всю висоту td */
+}
+
+.edit-icon, .delete-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 4px; 
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ефект при наведенні для олівця */
+.edit-icon:hover {
+    background-color: rgba(0, 191, 165, 0.1); /* Легкий бірюзовий фон */
+    transform: translateY(-2px);
+    filter: drop-shadow(0 0 8px rgba(0, 191, 165, 0.6));
+}
+
+/* Ефект при наведенні для кошика (змінюємо на червоний для акценту на видаленні) */
+.delete-icon:hover {
+    background-color: rgba(239, 68, 68, 0.1); 
+    transform: translateY(-2px);
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+}
+
+/* Зміна кольору самої іконки Trash при наведенні на червоний (опціонально) */
+.delete-icon:hover svg {
+    stroke: #ef4444; 
+}
+
+.detail-row {
+    cursor: default !important; /* На деталях курсор звичайний */
+}
+
+.detail-row td {
+    background-color: rgba(0, 0, 0, 0.25);
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 191, 165, 0.1);
+    animation: slideDown 0.3s ease-out;
+    height: 25px;
+}
+
+.detail-content {
+    padding-left: 85px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+}
+
+.detail-label {
+    color: #00BFA5;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
+    animation: fadeInBg 0.3s ease-out;
+}
+
+@keyframes fadeInBg {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: #1E2A38;
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid #00BFA5;
+    width: 400px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.modal-content h3 { color: #fff; margin-bottom: 20px; text-align: center; }
+
+.modal-content input, 
+.modal-content select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: white;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 0.95rem;
+}
+
+.modal-content select {
+    cursor: pointer;
+    appearance: none; 
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300BFA5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 15px;
+}
+
+.modal-content select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.cancel-btn {
+    background: #334155;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.save-btn {
+    background: #00BFA5;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.save-btn:hover { background: #009688; }
+.cancel-btn:hover { background: #475569; }
+
+
+
+
+.dept-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.2;
+}
+
+.arrow-indicator {
+    display: inline-block;
+    color: #00BFA5;
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+
+.archive-table tbody tr:hover .arrow-indicator {
+    filter: drop-shadow(0 0 5px rgba(0, 191, 165, 0.8));
+}
+
+.arrow-indicator.open {
+    transform: scale(1.1);
+    color: #fff;
+}
+
+
+
+.file-input-container {
+    margin-top: 10px;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.file-label {
+    display: block;
+    color: #00BFA5;
+    font-weight: bold;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+}
+
+.file-input {
+    width: 100%;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+/* Стилізація кнопки вибору файлу */
+.file-input::-webkit-file-upload-button {
+    background: #334155;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: 0.3s;
+}
+
+.file-input::-webkit-file-upload-button:hover {
+    background: #475569;
+}

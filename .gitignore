@@ -1,0 +1,24 @@
+# --- Python / Django ---
+gateplate-backend/.venv/
+gateplate-backend/__pycache__/
+gateplate-backend/*.py[cod]
+gateplate-backend/db.sqlite3
+gateplate-backend/media/detections/
+
+# --- GatePlate Frontend (React) ---
+gateplate-frontend/node_modules/
+gateplate-frontend/.pnp
+gateplate-frontend/.pnp.js
+gateplate-frontend/coverage/
+gateplate-frontend/build/
+gateplate-frontend/.env.local
+gateplate-frontend/.env.development.local
+gateplate-frontend/.env.test.local
+gateplate-frontend/.env.production.local
+gateplate-frontend/npm-debug.log*
+gateplate-frontend/yarn-debug.log*
+gateplate-frontend/yarn-error.log*
+
+# --- OS / IDE ---
+.DS_Store
+.vscode/
