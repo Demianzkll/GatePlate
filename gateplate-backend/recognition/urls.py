@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from .views import (
     DetectedPlateListView,
     AnalysisStartView,
@@ -6,8 +6,14 @@ from .views import (
     PlateConfirmView,
     EmployeeListCreateView,
     EmployeeDetailView,
-    DepartmentListView
+    DepartmentListView,
+    VehicleViewSet
 )
+from rest_framework.routers import DefaultRouter
+
+
+router = DefaultRouter()
+router.register(r'vehicles', VehicleViewSet)
 
 urlpatterns = [
     # Історія розпізнавань
@@ -24,4 +30,5 @@ urlpatterns = [
     # Працівники: Отримання одного, Оновлення (PUT) та Видалення (DELETE) за ID
     path('employees/<int:pk>/', EmployeeDetailView.as_view(), name='employee-detail'),
     path('departments/', DepartmentListView.as_view(), name='department-list'),
+    path('', include(router.urls)),
 ]

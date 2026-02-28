@@ -1,12 +1,14 @@
 import threading
 import time
 from rest_framework.views import APIView
+from rest_framework import viewsets
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 from .models import DetectedPlate, Vehicle, Camera, BlackList, Employee, Department
-from .serializers import DetectedPlateSerializer, EmployeeSerializer, DepartmentSerializer
+from .serializers import DetectedPlateSerializer, EmployeeSerializer, DepartmentSerializer, VehicleSerializer
 from scripts.vision_engine import VisionEngine
 
 # Глобальні сховища
@@ -117,3 +119,30 @@ class VehicleStatusUpdateView(APIView):
             BlackList.objects.filter(plate_text=plate).delete()
             return Response({"status": "unblocked"})
         return Response({"error": "Invalid action"}, status=400)
+    
+
+
+class VehicleViewSet(viewsets.ModelViewSet):
+    queryset = Vehicle.objects.all()
+    serializer_class = VehicleSerializer
+
+    @action(detail=False, methods=['get'])
+    def check_plate(self, request):
+        plate = request.query_params.get('plate', '').upper().strip()
+        if not plate:
+            return Response({"error": "Номер не вказано"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            vehicle = Vehicle.objects.get(plate_text=plate)
+            serializer = self.get_serializer(vehicle)
+            return Response({
+                "access": True,
+                "message": "АВТОПРОПУСК ДОЗВОЛЕНО",
+                "data": serializer.data
+            })
+        except Vehicle.DoesNotExist:
+            return Response({
+                "access": False,
+                "message": "ОБ'ЄКТ НЕ ЗНАЙДЕНО",
+                "data": None
+            }, status=status.HTTP_404_NOT_FOUND)

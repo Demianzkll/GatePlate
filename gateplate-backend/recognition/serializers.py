@@ -38,17 +38,22 @@ class DetectedPlateSerializer(serializers.ModelSerializer):
 
 
 
+from rest_framework import serializers
+from .models import Vehicle
+
 class VehicleSerializer(serializers.ModelSerializer):
+    # Використовуємо твій метод __str__ для колонки "Власник"
     owner_name = serializers.ReadOnlyField(source='employee.__str__')
-    owner_dept = serializers.ReadOnlyField(source='employee.root_department')
     
     class Meta:
         model = Vehicle
         fields = [
             'id', 
-            'employee',      
-            'owner_name',   
-            'owner_dept',    
-            'plate_text',   
-            'brand_model'    
+            'employee',      # ID працівника (потрібен для вибору у випадаючому списку при додаванні)
+            'owner_name',    # ПІБ власника (для відображення в таблиці)
+            'plate_text',    # Номерний знак
+            'brand_model'    # Марка та модель авто
         ]
+
+    def validate_plate_text(self, value):
+        return value.upper().strip()
