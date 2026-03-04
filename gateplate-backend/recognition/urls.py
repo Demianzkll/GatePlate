@@ -7,28 +7,22 @@ from .views import (
     EmployeeListCreateView,
     EmployeeDetailView,
     DepartmentListView,
-    VehicleViewSet
+    VehicleViewSet,
+    GuestVehicleCreateView
 )
 from rest_framework.routers import DefaultRouter
-
 
 router = DefaultRouter()
 router.register(r'vehicles', VehicleViewSet)
 
 urlpatterns = [
-    # Історія розпізнавань
     path('detected-plates/', DetectedPlateListView.as_view(), name='plates-api'),
-    
-    # Керування VisionEngine
     path('start-analysis/', AnalysisStartView.as_view(), name='start-analysis'),
     path('live-update/', LiveUpdateView.as_view(), name='live-update'),
     path('confirm-plate/', PlateConfirmView.as_view(), name='confirm-plate'),
-    
-    # Працівники: Отримання списку та Створення (POST)
     path('employees/', EmployeeListCreateView.as_view(), name='employees-list'),
-    
-    # Працівники: Отримання одного, Оновлення (PUT) та Видалення (DELETE) за ID
     path('employees/<int:pk>/', EmployeeDetailView.as_view(), name='employee-detail'),
     path('departments/', DepartmentListView.as_view(), name='department-list'),
+    path('guest/register/', GuestVehicleCreateView.as_view(), name='guest-vehicle-register'), # Додай це!
     path('', include(router.urls)),
 ]

@@ -1,8 +1,15 @@
 from django.db import models
+from django.conf import settings 
 
-# Create your models here.
 
-from django.db import models
+class UserProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, related_name='profile', on_delete=models.CASCADE)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+
+    def __str__(self):
+        return f"Профіль: {self.user.username}"
+
+
 
 class Camera(models.Model):
     name = models.CharField(max_length=100, verbose_name="Назва камери")
@@ -59,12 +66,35 @@ class Employee(models.Model):
 
 
 class Vehicle(models.Model):
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='vehicles', verbose_name="Власник")
+    employee = models.ForeignKey(
+        Employee, 
+        on_delete=models.CASCADE, 
+        related_name='vehicles', 
+        verbose_name="Співробітник", 
+        null=True, 
+        blank=True
+    )
+    
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        verbose_name="Зареєстрував (Користувач)"
+    )
+    
     plate_text = models.CharField(max_length=20, unique=True, verbose_name="Номер авто")
     brand_model = models.CharField(max_length=100, blank=True, verbose_name="Марка/Модель")
+    
+    # Розділені поля для власника-гостя
+    owner_first_name = models.CharField(max_length=50, verbose_name="Ім'я власника", default="Гість")
+    owner_last_name = models.CharField(max_length=50, verbose_name="Прізвище власника", default="Невідомо")
 
     def __str__(self):
-        return f"{self.plate_text} ({self.employee.last_name}, {self.employee.first_name})"
+        # Якщо є прив'язка до працівника — беремо дані з його моделі, інакше — з полів власника
+        if self.employee:
+            return f"{self.plate_text} ({self.employee.last_name} {self.employee.first_name})"
+        return f"{self.plate_text} ({self.owner_last_name} {self.owner_first_name})"
 
 
 

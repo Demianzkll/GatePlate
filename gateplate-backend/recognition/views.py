@@ -1,24 +1,57 @@
 import threading
 import time
+from django.contrib.auth.models import User
 from rest_framework.views import APIView
-from rest_framework import viewsets
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework import status
+from rest_framework import viewsets, status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
 from .models import DetectedPlate, Vehicle, Camera, BlackList, Employee, Department
-from .serializers import DetectedPlateSerializer, EmployeeSerializer, DepartmentSerializer, VehicleSerializer
+from .serializers import (
+    DetectedPlateSerializer, 
+    EmployeeSerializer, 
+    DepartmentSerializer, 
+    VehicleSerializer,
+    UserSerializer # Переконайся, що створив цей серіалайзер
+)
 from scripts.vision_engine import VisionEngine
+
 
 # Глобальні сховища
 active_analyzers = {}
 live_previews = {}
 temp_best_frames = {}
 
+# --- ПРАВА ДОСТУПУ (PERMISSIONS) ---
+
+# recognition/views.py
+class IsStaffUser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Адмін Django або користувач у групах Admin/Operator
+        return (
+            request.user.is_staff or 
+            request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        )
+    
+# --- AUTH VIEWS ---
+
+class RegisterUserView(generics.CreateAPIView):
+    """Реєстрація нового гостя"""
+    queryset = User.objects.all()
+    permission_classes = [permissions.AllowAny]
+    
+    def perform_create(self, serializer):
+        user = serializer.save()
+        user.set_password(serializer.validated_data['password'])
+        user.save()
+
 # --- VISION ENGINE VIEWS ---
 
 class AnalysisStartView(APIView):
+    permission_classes = [IsStaffUser]
     def get(self, request):
         video_name = request.query_params.get('video', '')
         if video_name and video_name not in active_analyzers:
@@ -40,7 +73,10 @@ class AnalysisStartView(APIView):
             return Response({"status": "VisionEngine started"})
         return Response({"status": "Already running"})
 
+
+
 class LiveUpdateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
     def get(self, request):
         video_name = request.query_params.get('video', '')
         data = live_previews.get(video_name)
@@ -51,7 +87,10 @@ class LiveUpdateView(APIView):
             threading.Thread(target=delayed_clear).start()
         return Response(data)
 
+
+
 class PlateConfirmView(APIView):
+    permission_classes = [IsStaffUser]
     def post(self, request):
         data = request.data
         plate_text = data.get('plate')
@@ -62,7 +101,7 @@ class PlateConfirmView(APIView):
             return Response({"error": "No cached data found"}, status=status.HTTP_400_BAD_REQUEST)
 
         camera_obj, _ = Camera.objects.get_or_create(name=f"Камера: {video_name}")
-        vehicle_obj = Vehicle.objects.filter(license_plate=plate_text).first()
+        vehicle_obj = Vehicle.objects.filter(plate_text=plate_text).first()
         
         new_record = DetectedPlate.objects.create(
             camera=camera_obj,
@@ -80,51 +119,45 @@ class PlateConfirmView(APIView):
 
 # --- EMPLOYEE CRUD VIEWS ---
 
-class EmployeeListCreateView(ListCreateAPIView):
+class EmployeeListCreateView(generics.ListCreateAPIView):
     queryset = Employee.objects.all().order_by('-id')
     serializer_class = EmployeeSerializer
+    permission_classes = [IsStaffUser]
 
-class EmployeeDetailView(RetrieveUpdateDestroyAPIView):
+class EmployeeDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
+    permission_classes = [IsStaffUser]
 
 # --- DEPARTMENT VIEWS ---
 
 class DepartmentListView(APIView):
-    """Повертає всі відділи для вибору в модальному вікні"""
+    permission_classes = [IsStaffUser]
     def get(self, request):
         departments = Department.objects.all()
         serializer = DepartmentSerializer(departments, many=True)
         return Response(serializer.data)
 
-# --- DETECTED PLATES VIEW (Додано для виправлення помилки) ---
+# --- DETECTED PLATES VIEW ---
 
 class DetectedPlateListView(APIView):
-    """Повертає історію розпізнаних номерів"""
+    permission_classes = [IsStaffUser]
     def get(self, request):
         plates = DetectedPlate.objects.all().order_by('-timestamp')[:10]
         serializer = DetectedPlateSerializer(plates, many=True)
         return Response(serializer.data)
 
-# --- OTHER ---
-
-class VehicleStatusUpdateView(APIView):
-    def post(self, request):
-        plate = request.data.get('plate')
-        action = request.data.get('action') 
-        if action == 'to_black':
-            BlackList.objects.get_or_create(plate_text=plate)
-            return Response({"status": "blocked"})
-        elif action == 'to_white':
-            BlackList.objects.filter(plate_text=plate).delete()
-            return Response({"status": "unblocked"})
-        return Response({"error": "Invalid action"}, status=400)
-    
-
+# --- VEHICLE VIEWS ---
 
 class VehicleViewSet(viewsets.ModelViewSet):
     queryset = Vehicle.objects.all()
     serializer_class = VehicleSerializer
+
+    def get_permissions(self):
+        # Гість може тільки перевіряти номер, але не бачити весь список
+        if self.action == 'check_plate':
+            return [permissions.IsAuthenticated()]
+        return [IsStaffUser()]
 
     @action(detail=False, methods=['get'])
     def check_plate(self, request):
@@ -146,3 +179,34 @@ class VehicleViewSet(viewsets.ModelViewSet):
                 "message": "ОБ'ЄКТ НЕ ЗНАЙДЕНО",
                 "data": None
             }, status=status.HTTP_404_NOT_FOUND)
+
+
+
+class GuestVehicleCreateView(generics.CreateAPIView):
+    queryset = Vehicle.objects.all()
+    serializer_class = VehicleSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        
+        serializer.save(
+            created_by=user,
+            owner_first_name=user.first_name or user.username,
+            owner_last_name=user.last_name or "",
+        )
+
+
+
+class VehicleStatusUpdateView(APIView):
+    permission_classes = [IsStaffUser]
+    def post(self, request):
+        plate = request.data.get('plate')
+        action_type = request.data.get('action') 
+        if action_type == 'to_black':
+            BlackList.objects.get_or_create(plate_text=plate)
+            return Response({"status": "blocked"})
+        elif action_type == 'to_white':
+            BlackList.objects.filter(plate_text=plate).delete()
+            return Response({"status": "unblocked"})
+        return Response({"error": "Invalid action"}, status=400)

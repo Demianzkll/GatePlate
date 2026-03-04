@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import Employee, Vehicle, DetectedPlate, Camera, Department
+from .models import Employee, Vehicle, DetectedPlate, Camera, Department, UserProfile
+from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 
 class EmployeeSerializer(serializers.ModelSerializer):
     has_details = serializers.SerializerMethodField()
@@ -38,8 +40,6 @@ class DetectedPlateSerializer(serializers.ModelSerializer):
 
 
 
-from rest_framework import serializers
-from .models import Vehicle
 
 class VehicleSerializer(serializers.ModelSerializer):
     # Використовуємо твій метод __str__ для колонки "Власник"
@@ -57,3 +57,29 @@ class VehicleSerializer(serializers.ModelSerializer):
 
     def validate_plate_text(self, value):
         return value.upper().strip()
+    
+
+
+
+class UserSerializer(serializers.ModelSerializer):
+    phone = serializers.CharField(write_only=True, required=True)
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'password', 'first_name', 'last_name', 'phone')
+
+    def create(self, validated_data):
+        phone = validated_data.pop('phone')
+        password = validated_data.pop('password')
+        
+        user = User.objects.create(**validated_data)
+        user.set_password(password)
+        user.save()
+
+        UserProfile.objects.create(user=user, phone=phone)
+
+        guest_group, created = Group.objects.get_or_create(name='Guest')
+        user.groups.add(guest_group)
+
+        return user
