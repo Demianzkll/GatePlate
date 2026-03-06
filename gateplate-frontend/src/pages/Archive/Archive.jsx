@@ -42,7 +42,7 @@ const Archive = () => {
                             {/* Перевіряємо наявність об'єкта vehicle, який ми додали в БД */}
                             <td className={plate.vehicle ? 'allowed' : 'denied'}>
                                 {plate.vehicle 
-                                    ? `ПРАЦІВНИК: ${plate.vehicle.employee_name}` 
+                                    ? `ПРАЦІВНИК: ${plate.vehicle.owner_name}` 
                                     : 'НЕВІДОМИЙ'}
                             </td>
                         </tr>

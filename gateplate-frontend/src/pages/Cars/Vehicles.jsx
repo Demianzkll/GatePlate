@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import './Vehicles.css';
 
-const Vehicles = () => {
+const Vehicles = ({ isAdmin }) => {
     const [vehicles, setVehicles] = useState([]);
     const [employees, setEmployees] = useState([]); // Для випадаючого списку
     const [searchTerm, setSearchTerm] = useState('');
@@ -80,9 +80,9 @@ const Vehicles = () => {
                         placeholder="Пошук..." 
                         onChange={(e) => setSearchTerm(e.target.value)} 
                     />
-                    <button className="add-btn" onClick={() => setIsModalOpen(true)}>
+                    {isAdmin && <button className="add-btn" onClick={() => setIsModalOpen(true)}>
                         + Додати
-                    </button>
+                    </button>}
                 </div>
             </div>
 
@@ -93,7 +93,7 @@ const Vehicles = () => {
                             <th>Власник</th>
                             <th>Номерний знак</th>
                             <th>Марка / Модель</th>
-                            <th>Дії</th>
+                            {isAdmin && <th>Дії</th>}
                         </tr>
                     </thead>
                     <tbody className="archive-table-body">
@@ -107,7 +107,7 @@ const Vehicles = () => {
                                         </span>
                                     </td>
                                     <td>{vehicle.brand_model || "—"}</td>
-                                    <td className="actions-cell">
+                                    {isAdmin && <td className="actions-cell">
                                         <button className="edit-icon" title="Редагувати">
                                             <Pencil size={18} color="#00BFA5" />
                                         </button>
@@ -118,7 +118,7 @@ const Vehicles = () => {
                                         >
                                             <Trash2 size={18} color="#00BFA5" />
                                         </button>
-                                    </td>
+                                    </td>}
                                 </tr>
                             ))
                         ) : (

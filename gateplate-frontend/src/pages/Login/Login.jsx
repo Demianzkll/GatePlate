@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom'; // Додаємо Link
+import { useNavigate, Link } from 'react-router-dom';
 import './Login.css';
 
 const Login = ({ onLogin }) => {
@@ -9,14 +9,31 @@ const Login = ({ onLogin }) => {
     const navigate = useNavigate();
 
     const handleLogin = async (e) => {
+        localStorage.clear()
         e.preventDefault();
         try {
             const res = await axios.post('http://127.0.0.1:8000/api/login/', { username, password });
+            
+            // 1. Зберігаємо всі дані, включаючи РОЛЬ
             localStorage.setItem('token', res.data.token);
             localStorage.setItem('username', username);
+            localStorage.setItem('role', res.data.role); // <-- Додали цей рядок
+            
             onLogin();
-            navigate('/');
+
+            // 2. Читаємо роль і вирішуємо, куди направити користувача
+            const userRole = res.data.role;
+
+            if (userRole === 'Administrators' || userRole === 'Operators') {
+                // Перекидаємо персонал на головну панель з таблицями
+                navigate('/'); 
+            } else {
+                // Перекидаємо гостей на їхню сторінку (заміни '/guest' на свій шлях, якщо він інший)
+                navigate('/guest'); 
+            }
+
         } catch (err) {
+            console.error("Помилка входу:", err.response?.data);
             alert("Невірний логін або пароль");
         }
     };
@@ -43,7 +60,6 @@ const Login = ({ onLogin }) => {
                     <button type="submit" className="login-btn">Увійти</button>
                 </form>
                 
-                {/* Нова кнопка для переходу на реєстрацію */}
                 <div className="auth-footer">
                     <p>Немає акаунта?</p>
                     <Link to="/signup" className="signup-link">Зареєструватися</Link>

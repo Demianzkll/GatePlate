@@ -13,13 +13,18 @@ import { DataProvider } from './DataContext';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   
-  // Визначаємо роль користувача
-  const username = localStorage.getItem('username');
-  const userRole = username === 'admin' ? 'admin' : 'guest';
+  // Отримуємо роль прямо з localStorage
+  const role = localStorage.getItem('role'); 
+
+  // Визначаємо права доступу
+  const isAdmin = role === 'Administrators';
+  const isOperator = role === 'Operators';
+  const isStaff = isAdmin || isOperator; 
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    localStorage.removeItem('role');
     setIsAuthenticated(false);
   };
 
@@ -43,6 +48,7 @@ function App() {
         <div className="App">
           <nav className="navbar">
             <div className="nav-container">
+              {/* Логотип */}
               <Link to="/" className="logo-link">
                 <div className="logo">
                   <img src="/logo.png" alt="Logo" />
@@ -51,12 +57,12 @@ function App() {
               </Link>
 
               <div className="nav-buttons">
-                {/* Адмін бачить повне меню, Гість - тільки реєстрацію свого авто */}
-                {userRole === 'admin' ? (
+                {/* Навігація для Персоналу (Адмін + Оператор) */}
+                {isStaff ? (
                   <>
                     <NavLink to="/" className="nav-item">Моніторинг</NavLink>
                     <NavLink to="/archive" className="nav-item">Архів</NavLink>
-                    <NavLink to="/employees" className="nav-item">Працівники</NavLink>
+                    {isAdmin && <NavLink to="/employees" className="nav-item">Працівники</NavLink>}
                     <NavLink to="/vehicles" className="nav-item">Автомобілі</NavLink>
                   </>
                 ) : (
@@ -70,26 +76,28 @@ function App() {
 
           <main className="content">
             <Routes>
-              {/* Автоматичний редирект залежно від ролі при вході на головну */}
+              {/* Головна сторінка (Моніторинг) */}
               <Route path="/" element={
-                userRole === 'admin' ? <Home /> : <Navigate to="/guest-registration" />
+                isStaff ? <Home /> : <Navigate to="/guest-registration" />
               } /> 
               
-              {/* Маршрути доступні тільки адміну */}
-              {userRole === 'admin' && (
+              {/* Спільні маршрути */}
+              {isStaff && (
                 <>
-                  <Route path="/archive" element={<Archive />} /> 
-                  <Route path="/employees" element={<Employees />} />
-                  <Route path="/vehicles" element={<Vehicles />} />
+                  <Route path="/archive" element={<Archive />} />
+                  {/* Сторінка авто однакова для обох, але всередині Vehicles ми зробимо перевірку на роль */}
+                  <Route path="/vehicles" element={<Vehicles isAdmin={isAdmin} />} />
                 </>
               )}
 
-              {/* Маршрут реєстрації авто (доступний всім залогіненим) */}
+              {/* Тільки для Адміна */}
+              {isAdmin && (
+                <Route path="/employees" element={<Employees />} />
+              )}
+
+              {/* Для Гостей */}
               <Route path="/guest-registration" element={<GuestRegistration />} />
 
-              {/* Перенаправлення для безпеки */}
-              <Route path="/login" element={<Navigate to="/" />} />
-              <Route path="/signup" element={<Navigate to="/" />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>

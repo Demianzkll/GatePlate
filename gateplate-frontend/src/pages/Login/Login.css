@@ -11,9 +11,16 @@
     padding: 40px;
     border-radius: 20px;
     border: 1px solid rgba(0, 191, 165, 0.3);
-    width: 350px;
+    width: 350px; /* Твій оригінальний розмір */
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
     text-align: center;
+    /* Плавна поява картки при завантаженні */
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .login-header h2 {
@@ -24,8 +31,16 @@
 
 .login-header span { color: #00BFA5; }
 
+/* Центрування полів */
+.login-card form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .login-card input {
     width: 100%;
+    box-sizing: border-box; /* Щоб паддінги не розпирали ширину */
     padding: 12px;
     margin-bottom: 15px;
     background: #0f172a;
@@ -33,12 +48,20 @@
     color: white;
     border-radius: 8px;
     outline: none;
+    /* Плавність для всіх змін (колір, тінь, трансформація) */
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.login-card input:focus { border-color: #00BFA5; }
+/* Оновлений фокус: легке світіння та "оживлена" рамка */
+.login-card input:focus { 
+    border-color: #00BFA5;
+    background: #141e2e;
+    box-shadow: 0 0 12px rgba(0, 191, 165, 0.2);
+    transform: scale(1.01); /* Дуже легке збільшення, майже непомітне, але створює об'єм */
+}
 
 .login-btn {
-    width: 100%;
+    width: 50%;
     padding: 12px;
     background: #00BFA5;
     border: none;
@@ -46,12 +69,40 @@
     font-weight: bold;
     border-radius: 8px;
     cursor: pointer;
-    transition: 0.3s;
+    /* Плавний перехід для хавера */
+    transition: all 0.3s ease;
 }
 
+/* Оновлений хавер кнопки: гра тіней та масштабу */
 .login-btn:hover {
-    background: #009688;
-    box-shadow: 0 0 15px rgba(0, 191, 165, 0.4);
+    background: #00d9bc;
+    transform: translateY(-2px); /* Кнопка ніби "піднімається" до курсора */
+    box-shadow: 0 6px 20px rgba(0, 191, 165, 0.4);
+}
+
+/* Ефект натискання (зворотний зв'язок) */
+.login-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(0, 191, 165, 0.2);
 }
 
 .login-error { color: #ef4444; font-size: 0.85rem; margin-bottom: 10px; }
+
+/* Стиль для посилань знизу */
+.auth-footer {
+    margin-top: 20px;
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+.signup-link {
+    color: #00BFA5;
+    text-decoration: none;
+    margin-left: 5px;
+    transition: color 0.3s;
+}
+
+.signup-link:hover {
+    color: #00d9bc;
+    text-decoration: underline;
+}

@@ -20,10 +20,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.authtoken.views import obtain_auth_token
 from recognition.views import RegisterUserView
+from recognition.views import CustomAuthToken
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/login/', obtain_auth_token, name='api_token_auth'), # Для входу
+    path('api/login/', CustomAuthToken.as_view(), name='api_token_auth'), # Для входу
     path('api/register/', RegisterUserView.as_view(), name='api_register'), # Для реєстрації гостя
     path('api/', include('recognition.urls')),
 ]

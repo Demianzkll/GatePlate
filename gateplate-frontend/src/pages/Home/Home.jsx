@@ -429,75 +429,109 @@ const Home = () => {
 
           {/* КАРТКА №2: ДАНІ ВЛАСНИКА */}
 
-          <div className="card" style={{ textAlign: 'center', minHeight: '220px' }}>
+          <div className="card" style={{ 
+  textAlign: 'center', 
+  minHeight: '220px', 
+  background: '#1E2A38', 
+  border: '1px solid rgba(0, 191, 165, 0.2)' 
+}}>
+  <h4 style={{ color: '#ababab', marginBottom: '15px', fontSize: '0.9rem' }}>
+    ІНФОРМАЦІЯ ПРО ВЛАСНИКА:
+  </h4>
 
-            <h4 style={{ color: '#ababab', marginBottom: '15px' }}>Інформація про власника:</h4>
+  {lastDetection?.vehicle ? (
+    <div className="owner-data animate-fade-in">
+      {/* Контейнер для фото з бірюзовою рамкою */}
+      <div style={{ 
+        width: '80px', 
+        height: '80px', 
+        background: '#0f172a', 
+        borderRadius: '50%', 
+        margin: '0 auto 10px', 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        overflow: 'hidden',
+        border: '3px solid #00BFA5', // Твій фірмовий бірюзовий колір
+        boxShadow: '0 0 15px rgba(0, 191, 165, 0.2)'
+      }}>
+        {lastDetection.vehicle.employee?.photo ? (
+          <img 
+            src={`http://127.0.0.1:8000${lastDetection.vehicle.employee.photo}`} 
+            alt="Owner" 
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+          />
+        ) : (
+          <span style={{ fontSize: '2rem' }}>👤</span>
+        )}
+      </div>
 
-           
+      <p style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: '5px 0', color: '#fff' }}>
+        {/* Використовуємо owner_name, яке ми налаштували в серіалайзері */}
+        {lastDetection.vehicle.owner_name}
+      </p>
 
-            {lastDetection?.vehicle?.employee ? (
+      {/* Стилізований блок телефону */}
+      <div style={{ 
+  display: 'flex', 
+  justifyContent: 'center', 
+  alignItems: 'center', 
+  gap: '10px', 
+  color: '#00BFA5', 
+  fontSize: '0.95rem', 
+  margin: '10px 0' 
+}}>
+  {/* SVG іконка телефону, яка точно слухає CSS color */}
+  <svg 
+    width="16" 
+    height="16" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.5" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l2.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+  </svg>
+  
+  <span style={{ fontWeight: '600', letterSpacing: '0.5px' }}>
+    {lastDetection.vehicle.employee?.phone || lastDetection.vehicle.owner_phone || "Не вказано"}
+  </span>
+</div>
 
-              <div className="owner-data animate-fade-in">
+      <p style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.85rem', marginTop: '10px' }}>
+        ● ДОСТУП ДОЗВОЛЕНО
+      </p>
 
-                <div style={{ width: '60px', height: '60px', background: '#1e293b', borderRadius: '50%', margin: '0 auto 10px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.5rem', border: '2px solid #3b82f6' }}>
+      <hr style={{ borderColor: 'rgba(51, 65, 85, 0.5)', margin: '15px 0' }} />
 
-                  👤
-
-                </div>
-
-                <p style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: '5px 0', color: '#f8fafc' }}>
-
-                  {lastDetection.vehicle.employee.first_name} {lastDetection.vehicle.employee.last_name}
-
-                </p>
-
-                <p style={{ color: '#3b82f6', fontSize: '0.9rem', margin: '2px 0' }}>
-
-                  📞 {lastDetection.vehicle.employee.phone || "Не вказано"}
-
-                </p>
-
-                <p style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.8rem', marginTop: '5px' }}>
-
-                  ● ДОСТУП ДОЗВОЛЕНО
-
-                </p>
-
-                <hr style={{ borderColor: '#334155', margin: '10px 0' }} />
-
-                <div style={{ textAlign: 'left', fontSize: '0.8rem', color: '#94a3b8' }}>
-
-                  <p>Посада: {lastDetection.vehicle.employee.position || "Співробітник"}</p>
-
-                  <p>Авто: {lastDetection.vehicle.model || "Зареєстровано"}</p>
-
-                </div>
-
-              </div>
-
-            ) : (
-
-              <div style={{ marginTop: '30px' }}>
-
-                <div className="plate-badge" style={{ margin: '0 auto 10px', background: '#334155', fontSize: '1.1rem' }}>
-
-                  {lastDetection ? lastDetection.plate_text : "---"}
-
-                </div>
-
-                <p style={{ color: '#ef4444', fontWeight: 'bold' }}>● НЕВІДОМИЙ ОБ'ЄКТ</p>
-
-                <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
-
-                  Відсутній у базі співробітників.
-
-                </p>
-
-              </div>
-
-            )}
-
-          </div>
+      <div style={{ textAlign: 'left', fontSize: '0.85rem', color: '#94a3b8', padding: '0 10px' }}>
+        <p style={{ marginBottom: '4px' }}>
+          <strong>Посада:</strong> {lastDetection.vehicle.employee?.position || "Відвідувач"}
+        </p>
+        <p>
+          <strong>Авто:</strong> {lastDetection.vehicle.brand_model || "Зареєстровано"}
+        </p>
+      </div>
+    </div>
+  ) : (
+    <div style={{ marginTop: '30px' }}>
+      <div className="plate-badge" style={{ 
+        margin: '0 auto 10px', 
+        background: '#334155', 
+        fontSize: '1.1rem',
+        border: '2px solid #ef4444' 
+      }}>
+        {lastDetection ? lastDetection.plate_text : "---"}
+      </div>
+      <p style={{ color: '#ef4444', fontWeight: 'bold' }}>● НЕВІДОМИЙ ОБ'ЄКТ</p>
+      <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '5px' }}>
+        Відсутній у базі даних GatePlate.
+      </p>
+    </div>
+  )}
+</div>
 
         </aside>
 

@@ -4,6 +4,8 @@ from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework import viewsets, status, generics, permissions
 from rest_framework.response import Response
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 
 from .models import DetectedPlate, Vehicle, Camera, BlackList, Employee, Department
@@ -12,7 +14,7 @@ from .serializers import (
     EmployeeSerializer, 
     DepartmentSerializer, 
     VehicleSerializer,
-    UserSerializer # Переконайся, що створив цей серіалайзер
+    UserSerializer 
 )
 from scripts.vision_engine import VisionEngine
 
@@ -22,18 +24,42 @@ active_analyzers = {}
 live_previews = {}
 temp_best_frames = {}
 
+
+class CustomAuthToken(ObtainAuthToken):
+    def post(self, request, *args, **kwargs):
+        # 1. Перевіряємо логін і пароль
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        
+        # 2. Отримуємо або створюємо токен
+        token, created = Token.objects.get_or_create(user=user)
+        
+        # 3. ДІЗНАЄМОСЯ РОЛЬ (ГРУПУ) КОРИСТУВАЧА
+        user_role = "Guest" # За замовчуванням
+        if user.groups.exists():
+            user_role = user.groups.first().name # Беремо назву першої групи (напр. 'Operators')
+
+        # 4. Відправляємо React-у розширену відповідь!
+        return Response({
+            'token': token.key,
+            'user_id': user.pk,
+            'username': user.username,
+            'role': user_role
+        })
+
+
+
 # --- ПРАВА ДОСТУПУ (PERMISSIONS) ---
 
-# recognition/views.py
 class IsStaffUser(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
         
-        # Адмін Django або користувач у групах Admin/Operator
         return (
             request.user.is_staff or 
-            request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+            request.user.groups.filter(name__in=['Administrators', 'Operators']).exists()
         )
     
 # --- AUTH VIEWS ---
@@ -43,10 +69,8 @@ class RegisterUserView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = [permissions.AllowAny]
     
-    def perform_create(self, serializer):
-        user = serializer.save()
-        user.set_password(serializer.validated_data['password'])
-        user.save()
+    serializer_class = UserSerializer
+    
 
 # --- VISION ENGINE VIEWS ---
 

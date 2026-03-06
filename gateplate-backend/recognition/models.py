@@ -136,7 +136,7 @@ class DetectedPlate(models.Model):
     )
     
     image = models.ImageField(upload_to='detections/%Y/%m/%d/', verbose_name="Фото фіксації", null=True, blank=True)
-    confidence = models.FloatField(verbose_name="Впевненість AI")
+    confidence = models.FloatField(verbose_name="Впевненість")
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Час події")
 
     class Meta:

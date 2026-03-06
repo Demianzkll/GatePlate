@@ -23,11 +23,29 @@ class DepartmentSerializer(serializers.ModelSerializer):
         model = Department
         fields = ['id', 'name', 'parent']
 
+
 class VehicleSerializer(serializers.ModelSerializer):
-    employee = EmployeeSerializer(read_only=True)
+    # Використовуємо безпечний метод замість ReadOnlyField
+    owner_name = serializers.SerializerMethodField()
+    
+    # Якщо фронтенду потрібні деталі про працівника (опціонально)
+    employee_details = EmployeeSerializer(source='employee', read_only=True)
+
     class Meta:
         model = Vehicle
-        fields = ['plate_text', 'brand_model', 'employee']
+        fields = '__all__'
+
+    # Ця функція безпечно формує ПІБ і ніколи не видасть помилку JSON
+    def get_owner_name(self, obj):
+        if obj.employee:
+            # Якщо це авто працівника
+            return f"{obj.employee.last_name} {obj.employee.first_name}"
+        # Якщо це авто гостя
+        return f"{obj.owner_last_name} {obj.owner_first_name}"
+
+    def validate_plate_text(self, value):
+        return value.upper().strip()
+
 
 
 class DetectedPlateSerializer(serializers.ModelSerializer):
@@ -38,25 +56,6 @@ class DetectedPlateSerializer(serializers.ModelSerializer):
         model = DetectedPlate
         fields = ['id', 'plate_text', 'timestamp', 'confidence', 'vehicle', 'camera_name']
 
-
-
-
-class VehicleSerializer(serializers.ModelSerializer):
-    # Використовуємо твій метод __str__ для колонки "Власник"
-    owner_name = serializers.ReadOnlyField(source='employee.__str__')
-    
-    class Meta:
-        model = Vehicle
-        fields = [
-            'id', 
-            'employee',      # ID працівника (потрібен для вибору у випадаючому списку при додаванні)
-            'owner_name',    # ПІБ власника (для відображення в таблиці)
-            'plate_text',    # Номерний знак
-            'brand_model'    # Марка та модель авто
-        ]
-
-    def validate_plate_text(self, value):
-        return value.upper().strip()
     
 
 
@@ -79,7 +78,7 @@ class UserSerializer(serializers.ModelSerializer):
 
         UserProfile.objects.create(user=user, phone=phone)
 
-        guest_group, created = Group.objects.get_or_create(name='Guest')
+        guest_group, created = Group.objects.get_or_create(name='Guests')
         user.groups.add(guest_group)
 
         return user
