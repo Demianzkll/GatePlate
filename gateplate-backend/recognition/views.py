@@ -115,6 +115,7 @@ class LiveUpdateView(APIView):
 
 class PlateConfirmView(APIView):
     permission_classes = [IsStaffUser]
+    
     def post(self, request):
         data = request.data
         plate_text = data.get('plate')
@@ -124,23 +125,31 @@ class PlateConfirmView(APIView):
         if not temp_data:
             return Response({"error": "No cached data found"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 1. Отримуємо або створюємо камеру
         camera_obj, _ = Camera.objects.get_or_create(name=f"Камера: {video_name}")
+        
+        # 2. Шукаємо автомобіль у базі за номером
         vehicle_obj = Vehicle.objects.filter(plate_text=plate_text).first()
         
+        # 3. Створюємо запис в архіві (DetectedPlate)
+        # Ми прибираємо 'plate_number' та 'status', бо їх немає в моделі
         new_record = DetectedPlate.objects.create(
             camera=camera_obj,
-            plate_number=plate_text,
+            plate_text=plate_text,  # Виправлено з plate_number на plate_text
             confidence=temp_data.get('conf', 0.0),
-            status="дозволено" if vehicle_obj else "невідомо"
+            vehicle=vehicle_obj     # Передаємо знайдений об'єкт або None
         )
 
+        # 4. Зберігаємо фото, якщо воно є в кеші
         if 'image_content' in temp_data:
             new_record.image.save(f"{plate_text}_manual.jpg", temp_data['image_content'], save=True)
 
+        # 5. Очищуємо тимчасові дані
         live_previews.pop(video_name, None)
         temp_best_frames.pop(video_name, None)
+        
         return Response({"status": "saved"})
-
+    
 # --- EMPLOYEE CRUD VIEWS ---
 
 class EmployeeListCreateView(generics.ListCreateAPIView):
