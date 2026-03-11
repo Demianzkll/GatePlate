@@ -247,38 +247,34 @@ class VehicleStatusUpdateView(APIView):
     
 
 class PhotoRecognitionAPIView(APIView):
-    # Дозволяємо доступ будь-якому авторизованому користувачу
     permission_classes = [permissions.IsAuthenticated]
-    # MultiPartParser дозволяє приймати файли через FormData
-    parser_classes = [MultiPartParser]
+    parser_classes = [MultiPartParser] # Необхідно для завантаження файлів
 
     def post(self, request):
         user = request.user
         image_file = request.FILES.get('car_image')
         
         if not image_file:
-            return Response({"error": "Файл зображення не знайдено"}, status=400)
+            return Response({"error": "Файл не завантажено"}, status=400)
 
-        # Перевіряємо роль користувача (Адмін/Оператор чи Гість)
-        is_staff = user.groups.filter(name__in=['Administrators', 'Operators']).exists()
-
-        # 1. Ініціалізуємо VisionEngine (без параметрів для відео)
+        # 1. Ініціалізуємо двигун (без параметрів відео)
         engine = VisionEngine()
         
-        # 2. Викликаємо розпізнавання
+        # 2. Викликаємо аналіз (він тепер використовує твій PlateRecognizer всередині)
         analysis = engine.analyze_single_photo(image_file)
 
-        # 3. Формуємо відповідь залежно від прав доступу
+        # 3. Перевіряємо роль користувача для фільтрації даних
+        is_staff = user.groups.filter(name__in=['Administrators', 'Operators']).exists()
+
         if not is_staff:
-            # Гість отримує лише номер та впевненість
+            # Для ГОСТЯ: повертаємо тільки технічні дані розпізнавання
             return Response({
                 "plate_text": analysis.get("plate_text"),
                 "confidence": analysis.get("confidence"),
                 "is_known": analysis.get("is_known"),
-                # Для гостя приховуємо дані власника
                 "owner_name": None,
                 "owner_phone": None
             })
 
-        # Адмін та Оператор отримують повні дані
+        # Для АДМІНА/ОПЕРАТОРА: повертаємо все, що знайшов двигун
         return Response(analysis)
