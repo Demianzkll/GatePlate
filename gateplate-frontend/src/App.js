@@ -7,7 +7,8 @@ import Home from './pages/Home/Home';
 import Vehicles from './pages/Cars/Vehicles'; 
 import Login from './pages/Login/Login';
 import Signup from './pages/Login/Signup'; 
-import GuestRegistration from './pages/Register/GuestRegistration'; 
+import GuestRegistration from './pages/RegisterCar/GuestRegistration';
+import PhotoRecognition from './pages/PhotoRecognition/PhotoRecognition'; 
 import { DataProvider } from './DataContext';
 
 function App() {
@@ -61,6 +62,7 @@ function App() {
                 {isStaff ? (
                   <>
                     <NavLink to="/" className="nav-item">Моніторинг</NavLink>
+                    <NavLink to="/photo-analysis" className="nav-item">Розпізнати фото</NavLink>
                     <NavLink to="/archive" className="nav-item">Архів</NavLink>
                     {isAdmin && <NavLink to="/employees" className="nav-item">Працівники</NavLink>}
                     <NavLink to="/vehicles" className="nav-item">Автомобілі</NavLink>
@@ -79,7 +81,9 @@ function App() {
               {/* Головна сторінка (Моніторинг) */}
               <Route path="/" element={
                 isStaff ? <Home /> : <Navigate to="/guest-registration" />
-              } /> 
+              } />
+
+            <Route path="/photo-analysis" element={<PhotoRecognition/>} /> 
               
               {/* Спільні маршрути */}
               {isStaff && (

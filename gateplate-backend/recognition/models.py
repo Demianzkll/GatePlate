@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings 
+from django.contrib.auth.models import User
+import uuid
 
 
 class UserProfile(models.Model):
@@ -150,3 +152,15 @@ class DetectedPlate(models.Model):
     
     def __str__(self):
         return f"{self.plate_text} - {self.timestamp.strftime('%H:%M:%S')}"
+
+
+class APIKey(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='api_keys')
+    key = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    is_active = models.BooleanField(default=True)
+    requests_limit = models.IntegerField(default=50) # Безкоштовний ліміт для тесту
+    requests_used = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.key}"

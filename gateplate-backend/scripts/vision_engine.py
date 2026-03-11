@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import cv2
 import pytesseract
@@ -12,52 +13,125 @@ from recognition.models import DetectedPlate, Camera, Vehicle, AccessPermit, Bla
 
 
 class VisionEngine:
-    def __init__(self, video_name, live_dict, cache_dict, model_name='best.pt'):
+    def __init__(self, video_name=None, live_dict=None, cache_dict=None, model_name='best.pt'):
         self.video_name = video_name
         self.live_dict = live_dict    
         self.cache_dict = cache_dict  
         
-        # Використовуємо settings.BASE_DIR для надійності шляхів
         model_path = os.path.join(settings.BASE_DIR, 'ai_models', model_name)
         self.model = YOLO(model_path)
         self.frame_step = 10
         self.best_results = {}
 
     def _validate_plate(self, text):
-        """Валідація та автокорекція за шаблоном АА0000АА (Україна)"""
-        if not text:
-            return None
+            if not text: return None
             
-        # 1. Лишаємо тільки латинські літери та цифри
-        clean_text = "".join(re.findall(r'[A-Z0-9]', text.upper()))
-        
-        # 2. Жорстка перевірка на довжину
-        if len(clean_text) != 8:
-            return None
-
-        chars = list(clean_text)
-        
-        # 3. Автокорекція за позиціями (Літери-Цифри-Літери)
-        # Позиції літер: 0, 1 та 6, 7
-        letter_map = {'0': 'O', '1': 'I', '2': 'Z', '5': 'S', '8': 'B'}
-        for i in [0, 1, 6, 7]:
-            if chars[i] in letter_map:
-                chars[i] = letter_map[chars[i]]
+            # 1. Лишаємо тільки А-Z та 0-9
+            clean_text = "".join(re.findall(r'[A-Z0-9]', text.upper()))
             
-        # Позиції цифр: 2, 3, 4, 5
-        digit_map = {'O': '0', 'I': '1', 'Z': '2', 'S': '5', 'B': '8'}
-        for i in range(2, 6):
-            if chars[i] in digit_map:
-                chars[i] = digit_map[chars[i]]
+            # 2. ФІКС ДЛЯ ПРАПОРА: Якщо 9 символів і перший 'M' або 'W' — видаляємо його
+            if len(clean_text) == 9 and clean_text[0] in ['M', 'W']:
+                clean_text = clean_text[1:]
+                print(f"[FIX] Видалено шум прапора: {clean_text}")
 
-        final_text = "".join(chars)
+            if len(clean_text) != 8: 
+                return None
 
-        # 4. Регулярний вираз: 2 букви, 4 цифри, 2 букви
-        pattern = r'^[A-Z]{2}\d{4}[A-Z]{2}$'
-        if re.match(pattern, final_text):
-            return final_text
+            chars = list(clean_text)
+            
+            # 3. КАРТА КОРЕКЦІЇ (Додаємо 0 -> O для країв та O -> 0 для центру)
+            letter_map = {'0': 'O', '1': 'I', '2': 'Z', '5': 'S', '8': 'B'}
+            digit_map = {'O': '0', 'D': '0', 'Q': '0', 'I': '1', 'Z': '2', 'S': '5', 'B': '8'}
+
+            # Позиції літер (XX .... XX) -> індекси 0,1 та 6,7
+            for i in [0, 1, 6, 7]:
+                if chars[i] in letter_map:
+                    chars[i] = letter_map[chars[i]]
+                
+            # Позиції цифр (.. 0000 ..) -> індекси 2,3,4,5
+            for i in range(2, 6):
+                if chars[i] in digit_map:
+                    chars[i] = digit_map[chars[i]]
+
+            final_text = "".join(chars)
+
+            # 4. Перевірка шаблоном
+            if re.match(r'^[A-Z]{2}\d{4}[A-Z]{2}$', final_text):
+                return final_text
+            
+            return None
+    
+
+    def _detect_and_ocr(self, frame):
+        """Уніфікований метод розпізнавання (взято з твого старого коду)"""
+        results = self.model(frame, verbose=False)
+        best_plate = None
+        max_conf = 0
+
+        for r in results:
+            for box in r.boxes:
+                conf = float(box.conf[0])
+                if conf < 0.4: continue
+
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                plate_roi = frame[y1:y2, x1:x2]
+                
+                if plate_roi.size > 0:
+                    # Покращення зображення (як у твоєму старому коді)
+                    gray = cv2.cvtColor(plate_roi, cv2.COLOR_BGR2GRAY)
+                    resized = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+                    
+                    raw_text = pytesseract.image_to_string(
+                        resized, 
+                        config="--psm 7 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+                    ).strip()
+                    
+                    plate_text = self._validate_plate(raw_text)
+                    if plate_text and conf > max_conf:
+                        max_conf = conf
+                        best_plate = plate_text
+
+        return best_plate, max_conf
+
+    def analyze_single_photo(self, image_file):
+        """ГОЛОВНИЙ МЕТОД ДЛЯ СТОРІНКИ ФОТО-АНАЛІЗУ"""
+        # 1. Читаємо файл з пам'яті в формат OpenCV
+        file_bytes = np.frombuffer(image_file.read(), np.uint8)
+        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+        if img is None: return {"error": "Не вдалося прочитати зображення"}
+
+        # 2. Шукаємо номер через YOLO
+        results = self.model(img, verbose=False)
+        best_plate = None
+        max_conf = 0
+
+        for r in results:
+            for box in r.boxes:
+                conf = float(box.conf[0])
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                plate_roi = img[y1:y2, x1:x2]
+                
+                # 3. Розпізнаємо текст
+                plate_text = self._process_roi(plate_roi)
+                if plate_text and conf > max_conf:
+                    max_conf = conf
+                    best_plate = plate_text
+
+        if not best_plate:
+            return {"plate_text": "Не розпізнано", "confidence": 0, "is_known": False}
+
+        # 4. Перевірка в базі
+        vehicle = Vehicle.objects.filter(plate_text=best_plate).first()
         
-        return None
+        return {
+            "plate_text": best_plate,
+            "confidence": max_conf,
+            "is_known": vehicle is not None,
+            "owner_name": f"{vehicle.employee.first_name} {vehicle.employee.last_name}" if vehicle and vehicle.employee else "Невідомий",
+            "owner_phone": vehicle.employee.phone if vehicle and vehicle.employee else "---"
+        }
+    
 
     def check_access(self, plate_text):
         """Перевірка статусу доступу в БД"""
@@ -81,6 +155,42 @@ class VisionEngine:
 
 
 
+    def _process_roi(self, plate_roi):
+            """Метод з детальним виводом у консоль для відладки"""
+            if plate_roi.size == 0: 
+                return None
+            
+            # 1. Препроцесинг
+            gray = cv2.cvtColor(plate_roi, cv2.COLOR_BGR2GRAY)
+            resized = cv2.resize(gray, None, fx=2.5, fy=2.5, interpolation=cv2.INTER_CUBIC)
+            _, thresh = cv2.threshold(resized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            
+            # 2. Отримуємо текст від Tesseract
+            raw_text = pytesseract.image_to_string(
+                thresh, 
+                config="--psm 7 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+            ).strip()
+
+            # --- ЦЕЙ БЛОК ВИВОДИТЬ ДАНІ В КОНСОЛЬ DJANGO ---
+            print("-" * 30)
+            print(f"[AI RAW]: '{raw_text}'") # Те, що побачив Tesseract
+            
+            # Очищуємо від сміття (пробіли, невидимі символи)
+            clean_attempt = "".join(re.findall(r'[A-Z0-9]', raw_text.upper()))
+            print(f"[AI CLEAN]: '{clean_attempt}' (Довжина: {len(clean_attempt)})")
+            
+            # Пробуємо валідувати
+            valid_text = self._validate_plate(raw_text)
+            
+            if valid_text:
+                print(f"[AI RESULT]: ✅ Валідний номер: {valid_text}")
+            else:
+                print(f"[AI RESULT]: ❌ Не пройшов валідацію шаблону")
+            print("-" * 30)
+            # ----------------------------------------------
+
+            return valid_text
+
     def run(self):
         video_path = os.path.join(settings.BASE_DIR, 'videos', self.video_name)
         cap = cv2.VideoCapture(video_path)
@@ -92,7 +202,9 @@ class VisionEngine:
             if not ret or frame_id > 800: break 
 
             if frame_id % self.frame_step == 0:
-                results = self.model(frame, verbose=False, stream=True)
+                # Змінюємо stream=True на звичайний виклик для стабільності
+                results = self.model(frame, verbose=False)
+                
                 for r in results:
                     for box in r.boxes:
                         conf = float(box.conf[0])
@@ -101,68 +213,61 @@ class VisionEngine:
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
                         plate_roi = frame[y1:y2, x1:x2]
                         
-                        if plate_roi.size > 0:
-                            gray = cv2.cvtColor(plate_roi, cv2.COLOR_BGR2GRAY)
-                            raw_text = pytesseract.image_to_string(gray, config="--psm 7").strip()
-                            plate_text = self._validate_plate(raw_text)
+                        # ВИКЛИКАЄМО НАШ НОВИЙ МЕТОД ОБРОБКИ
+                        plate_text = self._process_roi(plate_roi)
 
-                            if plate_text:
-                                # --- ЛОГІКА МИТТЄВОГО АВТО-ЗБЕРЕЖЕННЯ (>= 80%) ---
-                                if conf >= 0.8:
-                                    print(f"[!] Висока точність ({conf:.2f}). Починаю збереження...")
-                                    
-                                    # 1. Отримуємо камеру та транспорт (якщо є)
-                                    camera_obj, _ = Camera.objects.get_or_create(name=f"Камера: {self.video_name}")
-                                    vehicle_obj = Vehicle.objects.filter(plate_text=plate_text).first()
-                                    
-                                    # 2. Створюємо запис
-                                    new_rec = DetectedPlate(
-                                        camera=camera_obj,
-                                        plate_text=plate_text,
-                                        confidence=conf,
-                                        vehicle=vehicle_obj
-                                    )
-                                    
-                                    # 3. Підготовка зображення
-                                    _, buffer = cv2.imencode('.jpg', frame)
-                                    content = ContentFile(buffer.tobytes())
-                                    
-                                    # 4. ЗБЕРЕЖЕННЯ ФАЙЛУ ТА МОДЕЛІ (явно)
-                                    filename = f"{plate_text}_{timezone.now().strftime('%H%M%S')}.jpg"
-                                    new_rec.image.save(filename, content, save=True)
-                                    
-                                    # 5. Оновлення статусу для React
-                                    if self.live_dict is not None:
-                                        self.live_dict[self.video_name] = {
-                                            'plate': plate_text,
-                                            'conf': conf,
-                                            'needs_confirmation': False,
-                                            'is_finished': True,
-                                            'message': f"✅ АВТО-ПРОПУСК: {plate_text} ЗБЕРЕЖЕНО В БД"
-                                        }
-                                    
-                                    was_auto_saved = True 
-                                    print(f"[*] УСПІШНО ЗБЕРЕЖЕНО В БД: {plate_text}")
-                                    break 
-
-                                # Статус під час аналізу (низька точність)
+                        if plate_text:
+                            # --- ЛОГІКА МИТТЄВОГО АВТО-ЗБЕРЕЖЕННЯ (>= 80%) ---
+                            if conf >= 0.8:
+                                print(f"[!] Висока точність ({conf:.2f}). Авто-збереження...")
+                                
+                                camera_obj, _ = Camera.objects.get_or_create(name=f"Камера: {self.video_name}")
+                                vehicle_obj = Vehicle.objects.filter(plate_text=plate_text).first()
+                                
+                                new_rec = DetectedPlate(
+                                    camera=camera_obj,
+                                    plate_text=plate_text,
+                                    confidence=conf,
+                                    vehicle=vehicle_obj
+                                )
+                                
+                                _, buffer = cv2.imencode('.jpg', frame)
+                                content = ContentFile(buffer.tobytes())
+                                
+                                filename = f"{plate_text}_{timezone.now().strftime('%H%M%S')}.jpg"
+                                new_rec.image.save(filename, content, save=True)
+                                
                                 if self.live_dict is not None:
                                     self.live_dict[self.video_name] = {
                                         'plate': plate_text,
                                         'conf': conf,
                                         'needs_confirmation': False,
-                                        'is_finished': False,
-                                        'message': "Аналізую... шукаю чіткий кадр"
+                                        'is_finished': True,
+                                        'message': f"✅ АВТО-ПРОПУСК: {plate_text}"
                                     }
+                                
+                                was_auto_saved = True 
+                                break 
 
-                                # Оновлюємо кеш для фіналізації (якщо не буде >= 80%)
-                                if plate_text not in self.best_results or conf > self.best_results[plate_text]['conf']:
-                                    _, buffer = cv2.imencode('.jpg', frame)
-                                    self.best_results[plate_text] = {
-                                        'conf': conf,
-                                        'image_content': ContentFile(buffer.tobytes()),
-                                        'timestamp': timezone.now()
-                                    }
+                            # Оновлюємо live_dict для React
+                            if self.live_dict is not None:
+                                self.live_dict[self.video_name] = {
+                                    'plate': plate_text,
+                                    'conf': conf,
+                                    'needs_confirmation': False,
+                                    'is_finished': False,
+                                    'message': "Аналізую... шукаю чіткий кадр"
+                                }
+
+                            # Оновлюємо кеш найкращих кадрів (для методу finalize)
+                            if plate_text not in self.best_results or conf > self.best_results[plate_text]['conf']:
+                                _, buffer = cv2.imencode('.jpg', frame)
+                                self.best_results[plate_text] = {
+                                    'conf': conf,
+                                    'image_content': ContentFile(buffer.tobytes()),
+                                    'timestamp': timezone.now()
+                                }
+                                
                     if was_auto_saved: break
             frame_id += 1
         

@@ -8,7 +8,8 @@ from .views import (
     EmployeeDetailView,
     DepartmentListView,
     VehicleViewSet,
-    GuestVehicleCreateView
+    GuestVehicleCreateView,
+    PhotoRecognitionAPIView
 )
 from rest_framework.routers import DefaultRouter
 
@@ -23,6 +24,7 @@ urlpatterns = [
     path('employees/', EmployeeListCreateView.as_view(), name='employees-list'),
     path('employees/<int:pk>/', EmployeeDetailView.as_view(), name='employee-detail'),
     path('departments/', DepartmentListView.as_view(), name='department-list'),
-    path('guest/register/', GuestVehicleCreateView.as_view(), name='guest-vehicle-register'), # Додай це!
+    path('guest/register/', GuestVehicleCreateView.as_view(), name='guest-vehicle-register'),
+    path('recognize-photo/', PhotoRecognitionAPIView.as_view(), name='recognize-photo'),
     path('', include(router.urls)),
 ]

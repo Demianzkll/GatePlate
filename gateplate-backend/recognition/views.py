@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 
 from .models import DetectedPlate, Vehicle, Camera, BlackList, Employee, Department
 from .serializers import (
@@ -243,3 +244,41 @@ class VehicleStatusUpdateView(APIView):
             BlackList.objects.filter(plate_text=plate).delete()
             return Response({"status": "unblocked"})
         return Response({"error": "Invalid action"}, status=400)
+    
+
+class PhotoRecognitionAPIView(APIView):
+    # Дозволяємо доступ будь-якому авторизованому користувачу
+    permission_classes = [permissions.IsAuthenticated]
+    # MultiPartParser дозволяє приймати файли через FormData
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        user = request.user
+        image_file = request.FILES.get('car_image')
+        
+        if not image_file:
+            return Response({"error": "Файл зображення не знайдено"}, status=400)
+
+        # Перевіряємо роль користувача (Адмін/Оператор чи Гість)
+        is_staff = user.groups.filter(name__in=['Administrators', 'Operators']).exists()
+
+        # 1. Ініціалізуємо VisionEngine (без параметрів для відео)
+        engine = VisionEngine()
+        
+        # 2. Викликаємо розпізнавання
+        analysis = engine.analyze_single_photo(image_file)
+
+        # 3. Формуємо відповідь залежно від прав доступу
+        if not is_staff:
+            # Гість отримує лише номер та впевненість
+            return Response({
+                "plate_text": analysis.get("plate_text"),
+                "confidence": analysis.get("confidence"),
+                "is_known": analysis.get("is_known"),
+                # Для гостя приховуємо дані власника
+                "owner_name": None,
+                "owner_phone": None
+            })
+
+        # Адмін та Оператор отримують повні дані
+        return Response(analysis)

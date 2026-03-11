@@ -1,0 +1,136 @@
+.guest-reg-container {
+    min-height: calc(100vh - 70px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: radial-gradient(circle at center, #1E2A38 0%, #0f172a 100%);
+}
+
+.guest-reg-card {
+    background: #1E2A38;
+    padding: 25px 30px; /* Компактні відступи як у логіні */
+    border-radius: 12px;
+    border: 1px solid rgba(0, 191, 165, 0.2);
+    width: 320px; /* Вужча картка для мінімалізму */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.guest-reg-header {
+    margin-bottom: 20px;
+}
+
+.guest-reg-header h2 {
+    color: #fff;
+    font-size: 1.4rem; /* Зменшено шрифт заголовка */
+    margin: 10px 0 5px;
+    letter-spacing: 0.5px;
+}
+
+.guest-reg-header h2 span {
+    color: #00BFA5;
+}
+
+.guest-reg-header p {
+    color: #64748b;
+    font-size: 0.8rem; /* Дуже компактний опис */
+    line-height: 1.3;
+}
+
+.guest-reg-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Щільніше розташування елементів */
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+}
+
+.input-group label {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin-left: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.input-group input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px; /* Тонші поля як у логіні */
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: white;
+    border-radius: 6px;
+    outline: none;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.input-group input:focus {
+    border-color: #00BFA5;
+    background: #141e2e;
+    box-shadow: 0 0 8px rgba(0, 191, 165, 0.1);
+}
+
+.input-group input::placeholder {
+    color: #334155;
+}
+
+.guest-submit-btn {
+    width: 100%;
+    padding: 11px;
+    margin-top: 8px;
+    background: #00BFA5;
+    border: none;
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.guest-submit-btn:hover {
+    background: #00d9bc;
+    box-shadow: 0 4px 12px rgba(0, 191, 165, 0.3);
+}
+
+.guest-submit-btn:active {
+    transform: scale(0.98);
+}
+
+/* Компактні повідомлення про статус */
+.status-alert {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    text-align: left;
+}
+
+.status-alert.success {
+    background: rgba(16, 185, 129, 0.08);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-alert.error {
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
