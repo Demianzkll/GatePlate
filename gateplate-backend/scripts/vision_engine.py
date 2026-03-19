@@ -153,8 +153,8 @@ class VisionEngine:
         self.frame_step = 10
         self.best_results = {}
 
-    def analyze_single_photo(self, image_file):
-        """Оновлений метод: аналізує фото ТА зберігає його в Архів"""
+    def analyze_single_photo(self, image_file, save_to_archive=True):
+        """Аналізує фото. Зберігає в Архів тільки якщо save_to_archive=True"""
         # 1. Декодуємо зображення
         file_bytes = np.frombuffer(image_file.read(), np.uint8)
         img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
@@ -191,31 +191,30 @@ class VisionEngine:
                 owner_name = "Службове авто (без водія)"
 
         # =======================================================
-        # 5. НОВЕ: ЗБЕРЕЖЕННЯ В АРХІВ (DetectedPlate)
+        # 5. ЗБЕРЕЖЕННЯ В АРХІВ (тільки для staff-користувачів)
         # =======================================================
-        try:
-            # Використовуємо поле Camera як ідентифікатор джерела
-            camera_obj, _ = Camera.objects.get_or_create(name="Джерело: Фото-завантаження")
-            
-            # Створюємо запис в архіві
-            new_rec = DetectedPlate(
-                camera=camera_obj, 
-                plate_text=plate_text, 
-                confidence=conf, 
-                vehicle=vehicle # Буде null, якщо авто не з бази
-            )
-            
-            # Конвертуємо зображення назад у формат файлу для збереження
-            _, buffer = cv2.imencode('.jpg', img)
-            content = ContentFile(buffer.tobytes())
-            
-            # Генеруємо унікальне ім'я файлу
-            filename = f"{plate_text}_photo_{timezone.now().strftime('%H%M%S')}.jpg"
-            new_rec.image.save(filename, content, save=True)
-            
-            print(f"[ARCHIVE] Успішно збережено в архів: {plate_text} (Джерело: Фото)")
-        except Exception as e:
-            print(f"[ERROR] Не вдалося зберегти фото в архів: {e}")
+        if save_to_archive:
+            try:
+                camera_obj, _ = Camera.objects.get_or_create(name="Джерело: Фото-завантаження")
+                
+                new_rec = DetectedPlate(
+                    camera=camera_obj, 
+                    plate_text=plate_text, 
+                    confidence=conf, 
+                    vehicle=vehicle
+                )
+                
+                _, buffer = cv2.imencode('.jpg', img)
+                content = ContentFile(buffer.tobytes())
+                
+                filename = f"{plate_text}_photo_{timezone.now().strftime('%H%M%S')}.jpg"
+                new_rec.image.save(filename, content, save=True)
+                
+                print(f"[ARCHIVE] Успішно збережено в архів: {plate_text} (Джерело: Фото)")
+            except Exception as e:
+                print(f"[ERROR] Не вдалося зберегти фото в архів: {e}")
+        else:
+            print(f"[SKIP] Гість — фото НЕ зберігається в архів: {plate_text}")
 
         # =======================================================
 

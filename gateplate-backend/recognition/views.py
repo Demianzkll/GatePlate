@@ -257,14 +257,14 @@ class PhotoRecognitionAPIView(APIView):
         if not image_file:
             return Response({"error": "Файл не завантажено"}, status=400)
 
-        # 1. Ініціалізуємо двигун (без параметрів відео)
+        # 1. Перевіряємо роль користувача ДО аналізу
+        is_staff = user.groups.filter(name__in=['Administrators', 'Operators']).exists()
+
+        # 2. Ініціалізуємо двигун (без параметрів відео)
         engine = VisionEngine()
         
-        # 2. Викликаємо аналіз (він тепер використовує твій PlateRecognizer всередині)
-        analysis = engine.analyze_single_photo(image_file)
-
-        # 3. Перевіряємо роль користувача для фільтрації даних
-        is_staff = user.groups.filter(name__in=['Administrators', 'Operators']).exists()
+        # 3. Викликаємо аналіз — для гостя НЕ зберігаємо в архів
+        analysis = engine.analyze_single_photo(image_file, save_to_archive=is_staff)
 
         if not is_staff:
             # Для ГОСТЯ: повертаємо тільки технічні дані розпізнавання
