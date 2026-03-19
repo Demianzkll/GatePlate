@@ -68,7 +68,10 @@ function App() {
                     <NavLink to="/vehicles" className="nav-item">Автомобілі</NavLink>
                   </>
                 ) : (
-                  <NavLink to="/guest-registration" className="nav-item">Мій пропуск</NavLink>
+                  <>
+                    <NavLink to="/guest-registration" className="nav-item">Мій пропуск</NavLink>
+                    <NavLink to="/photo-analysis" className="nav-item">Фото аналіз</NavLink>
+                  </>
                 )}
                 
                 <button onClick={handleLogout} className="logout-btn">Вийти</button>
@@ -83,26 +86,26 @@ function App() {
                 isStaff ? <Home /> : <Navigate to="/guest-registration" />
               } />
 
-            <Route path="/photo-analysis" element={<PhotoRecognition/>} /> 
-              
-              {/* Спільні маршрути */}
-              {isStaff && (
-                <>
-                  <Route path="/archive" element={<Archive />} />
-                  {/* Сторінка авто однакова для обох, але всередині Vehicles ми зробимо перевірку на роль */}
-                  <Route path="/vehicles" element={<Vehicles isAdmin={isAdmin} />} />
-                </>
-              )}
+                <Route path="/photo-analysis" element={<PhotoRecognition/>} /> 
+                
+                {/* Спільні маршрути */}
+                {isStaff && (
+                  <>
+                    <Route path="/archive" element={<Archive />} />
+                    {/* Сторінка авто однакова для обох, але всередині Vehicles ми зробимо перевірку на роль */}
+                    <Route path="/vehicles" element={<Vehicles isAdmin={isAdmin} />} />
+                  </>
+                )}
 
-              {/* Тільки для Адміна */}
-              {isAdmin && (
-                <Route path="/employees" element={<Employees />} />
-              )}
+                {/* Тільки для Адміна */}
+                {isAdmin && (
+                  <Route path="/employees" element={<Employees />} />
+                )}
 
-              {/* Для Гостей */}
-              <Route path="/guest-registration" element={<GuestRegistration />} />
+                {/* Для Гостей */}
+                <Route path="/guest-registration" element={<GuestRegistration />} />
 
-              <Route path="*" element={<Navigate to="/" />} />
+                <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>
         </div>

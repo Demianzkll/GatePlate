@@ -1,27 +1,46 @@
+/* Контейнер на весь екран */
 .photo-recon-container {
     min-height: calc(100vh - 80px);
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 20px;
+    box-sizing: border-box;
 }
 
+/* Основна картка */
 .photo-recon-card {
     background: #1E2A38;
     padding: 25px 30px;
     border-radius: 12px;
     border: 1px solid rgba(0, 191, 165, 0.2);
-    width: 350px;
+    width: 60%;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Центруємо вміст */
 }
 
+/* Заголовок всередині картки */
+.guest-reg-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Зона завантаження */
 .upload-area-minimal {
+    width: 100%;
     border: 2px dashed #334155;
     border-radius: 12px;
     padding: 30px 10px;
     cursor: pointer;
     transition: all 0.3s;
     background: #0f172a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-sizing: border-box;
 }
 
 .upload-area-minimal:hover {
@@ -29,6 +48,7 @@
     background: rgba(0, 191, 165, 0.05);
 }
 
+/* Прев'ю зображення */
 .img-preview {
     width: 100%;
     max-height: 200px;
@@ -40,73 +60,109 @@
 .preview-actions {
     display: flex;
     gap: 10px;
+    width: 100%;
 }
+
+
 
 .btn-secondary {
     flex: 1;
     background: #334155;
     border: none;
     color: #fff;
+    padding: 11px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.2s;
 }
 
+.btn-secondary:hover {
+    background: #475569;
+}
+
+/* КАРТКА РЕЗУЛЬТАТУ (Центрування) */
 .result-card-minimal {
+    width: 100%;
     margin-top: 20px;
-    padding: 15px;
+    padding: 20px;
     border-radius: 8px;
-    text-align: left;
-}
-
-.status-allowed { background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; }
-.status-denied { background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; }
-
-.plate-number-res {
-    font-size: 1.4rem;
-    font-weight: bold;
-    color: #fff;
-    margin-left: 10px;
-}
-
-
-.staff-info {
+    text-align: center; /* Текст по центру */
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    background: rgba(0, 191, 165, 0.05);
-    padding: 12px;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+/* Статуси (замінив border-left на border-bottom для центру) */
+.status-known { 
+    background: rgba(16, 185, 129, 0.1); 
+    border-bottom: 3px solid #10b981; 
+}
+.status-unknown { 
+    background: rgba(239, 68, 68, 0.1); 
+    border-bottom: 3px solid #ef4444; 
+}
+
+/* Блок з номером авто */
+.result-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.plate-number-res {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 1px;
+}
+
+/* Інфо для персоналу (центрування елементів) */
+.staff-info {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(15, 23, 42, 0.3);
+    padding: 15px;
     border-radius: 8px;
     margin-top: 10px;
 }
 
-.staff-info p {
+.detail-item {
     display: flex;
+    flex-direction: column; /* Іконка над текстом або текст під текстом */
     align-items: center;
-    gap: 10px;
-    margin: 0;
-    font-size: 0.85rem;
-    color: #cbd5e1;
+    gap: 4px;
 }
 
-.staff-info p strong {
-    color: #00BFA5;
-    min-width: 70px;
+.detail-item span:first-of-type {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
+.detail-item span:last-of-type {
+    font-weight: 600;
+    color: #fff;
+    font-size: 1rem;
+}
+
+/* Інфо для гостя */
 .guest-info {
-    padding: 15px;
+    width: 100%;
+    padding: 15px 0;
     border-top: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
-.status-neutral {
-    background: rgba(51, 65, 85, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Анімація для результатів */
+/* Анімація */
 .animate-fade-in {
-    animation: fadeIn 0.3s ease-out forwards;
+    animation: fadeIn 0.4s ease-out forwards;
 }
 
 @keyframes fadeIn {

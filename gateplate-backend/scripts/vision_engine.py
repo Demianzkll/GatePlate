@@ -154,54 +154,81 @@ class VisionEngine:
         self.best_results = {}
 
     def analyze_single_photo(self, image_file):
-            """Головний метод для сторінки фото-аналізу (викликається з views.py)"""
-            # 1. Декодуємо зображення
-            file_bytes = np.frombuffer(image_file.read(), np.uint8)
-            img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        """Оновлений метод: аналізує фото ТА зберігає його в Архів"""
+        # 1. Декодуємо зображення
+        file_bytes = np.frombuffer(image_file.read(), np.uint8)
+        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
-            if img is None: 
-                return {"error": "Не вдалося прочитати зображення"}
+        if img is None: 
+            return {"error": "Не вдалося прочитати зображення"}
 
-            # 2. Викликаємо ваш оригінальний PlateRecognizer
-            # Він повертає (номер, точність)
-            plate_text, conf = self.recognizer.recognize_plate(img)
+        # 2. Отримуємо результат від ШІ
+        plate_text, conf = self.recognizer.recognize_plate(img)
 
-            if plate_text == "Невпізнано":
-                return {
-                    "plate_text": "Не розпізнано",
-                    "confidence": 0,
-                    "is_known": False,
-                    "owner_name": "---",
-                    "owner_phone": "---"
-                }
-
-            # 3. ПОШУК ВЛАСНИКА В БАЗІ ДАНИХ
-            # Шукаємо автомобіль за номером
-            vehicle = Vehicle.objects.filter(plate_text=plate_text).first()
-            
-            # Перевіряємо, чи є у автомобіля прив'язаний співробітник (Employee)
-            owner_name = "Невідомий"
-            owner_phone = "---"
-            is_known = False
-
-            if vehicle:
-                is_known = True
-                if vehicle.employee:
-                    owner_name = f"{vehicle.employee.first_name} {vehicle.employee.last_name}"
-                    owner_phone = vehicle.employee.phone
-                else:
-                    owner_name = "Службове авто (без водія)"
-
-            # 4. ПОВЕРТАЄМО ПОВНИЙ ПАКЕТ ДАНИХ ДЛЯ FRONTEND
-            print(f"[DATABASE] Результат пошуку {plate_text}: {owner_name}")
-            
+        # 3. Якщо ШІ взагалі нічого не побачив
+        if plate_text == "Невпізнано":
             return {
-                "plate_text": plate_text,
-                "confidence": round(conf, 2),
-                "is_known": is_known,
-                "owner_name": owner_name,
-                "owner_phone": owner_phone
+                "plate_text": "", 
+                "confidence": 0,
+                "is_known": False,
+                "owner_name": "Не розпізнано",
+                "owner_phone": "---",
+                "can_edit": True,
+                "message": "ШІ не зміг прочитати текст. Введіть номер вручну."
             }
+
+        # 4. ПОШУК ВЛАСНИКА 
+        vehicle = Vehicle.objects.filter(plate_text=plate_text).first()
+        is_known = bool(vehicle)
+        owner_name = "Невідомий"
+        owner_phone = "---"
+
+        if vehicle:
+            if vehicle.employee:
+                owner_name = f"{vehicle.employee.first_name} {vehicle.employee.last_name}"
+                owner_phone = vehicle.employee.phone
+            else:
+                owner_name = "Службове авто (без водія)"
+
+        # =======================================================
+        # 5. НОВЕ: ЗБЕРЕЖЕННЯ В АРХІВ (DetectedPlate)
+        # =======================================================
+        try:
+            # Використовуємо поле Camera як ідентифікатор джерела
+            camera_obj, _ = Camera.objects.get_or_create(name="Джерело: Фото-завантаження")
+            
+            # Створюємо запис в архіві
+            new_rec = DetectedPlate(
+                camera=camera_obj, 
+                plate_text=plate_text, 
+                confidence=conf, 
+                vehicle=vehicle # Буде null, якщо авто не з бази
+            )
+            
+            # Конвертуємо зображення назад у формат файлу для збереження
+            _, buffer = cv2.imencode('.jpg', img)
+            content = ContentFile(buffer.tobytes())
+            
+            # Генеруємо унікальне ім'я файлу
+            filename = f"{plate_text}_photo_{timezone.now().strftime('%H%M%S')}.jpg"
+            new_rec.image.save(filename, content, save=True)
+            
+            print(f"[ARCHIVE] Успішно збережено в архів: {plate_text} (Джерело: Фото)")
+        except Exception as e:
+            print(f"[ERROR] Не вдалося зберегти фото в архів: {e}")
+
+        # =======================================================
+
+        # 6. ПОВЕРТАЄМО ДАНІ ДЛЯ ФРОНТЕНДУ
+        return {
+            "plate_text": plate_text,
+            "confidence": round(conf, 2),
+            "is_known": is_known,
+            "owner_name": owner_name,
+            "owner_phone": owner_phone,
+            "can_edit": True,
+            "message": "Увага: низька точність. Перевірте номер!" if conf < 0.8 else "Розпізнано успішно"
+        }
     
 
 
@@ -236,22 +263,31 @@ class VisionEngine:
             if not ret or frame_id > 800: break 
 
             if frame_id % self.frame_step == 0:
-                # Використовуємо наш уніфікований метод
-                plate_text, conf = self.recognizer.process_image(frame, is_video=True)
+                # Отримуємо результат з кадру
+                plate_text, conf = self.recognizer.recognize_plate(frame)
 
-                if plate_text:
+                # ==================================================
+                # ГОЛОВНЕ ПРАВИЛО: Ігноруємо пусті/браковані кадри
+                # ==================================================
+                if plate_text != "Невпізнано": 
+                    
+                    # 1. Якщо точність висока — одразу пропускаємо (Авто-збереження)
                     if conf >= 0.8:
                         self._auto_save_record(frame, plate_text, conf)
                         was_auto_saved = True 
                         break 
 
+                    # 2. Якщо точність середня — показуємо оператору в реальному часі
                     if self.live_dict is not None:
                         self.live_dict[self.video_name] = {
-                            'plate': plate_text, 'conf': conf,
-                            'needs_confirmation': False, 'is_finished': False,
+                            'plate': plate_text, # Тут буде реальний текст (напр. "BC777")
+                            'conf': conf,
+                            'needs_confirmation': False, 
+                            'is_finished': False,
                             'message': "Аналізую... шукаю чіткий кадр"
                         }
 
+                    # 3. Зберігаємо найкращий результат за всю історію відео
                     if plate_text not in self.best_results or conf > self.best_results[plate_text]['conf']:
                         _, buffer = cv2.imencode('.jpg', frame)
                         self.best_results[plate_text] = {
@@ -259,10 +295,14 @@ class VisionEngine:
                             'image_content': ContentFile(buffer.tobytes()),
                             'timestamp': timezone.now()
                         }
+                        
             frame_id += 1
         
         cap.release()
-        if not was_auto_saved: self.finalize()
+        
+        # Коли відео закінчилось, підбиваємо підсумки (перевірка в Базі Даних)
+        if not was_auto_saved: 
+            self.finalize()
 
     def _auto_save_record(self, frame, plate_text, conf):
         """Внутрішній метод для миттєвого збереження в БД"""
