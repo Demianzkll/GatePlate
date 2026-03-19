@@ -7,6 +7,7 @@ import uuid
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, related_name='profile', on_delete=models.CASCADE)
     phone = models.CharField(max_length=20, blank=True, null=True)
+    free_recognitions_used = models.IntegerField(default=0, verbose_name="Використано безкоштовних розпізнавань")
 
     def __str__(self):
         return f"Профіль: {self.user.username}"

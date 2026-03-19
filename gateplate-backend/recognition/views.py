@@ -9,7 +9,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 
-from .models import DetectedPlate, Vehicle, Camera, BlackList, Employee, Department
+from .models import DetectedPlate, Vehicle, Camera, BlackList, Employee, Department, UserProfile
 from .serializers import (
     DetectedPlateSerializer, 
     EmployeeSerializer, 
@@ -260,13 +260,24 @@ class PhotoRecognitionAPIView(APIView):
         # 1. Перевіряємо роль користувача ДО аналізу
         is_staff = user.groups.filter(name__in=['Administrators', 'Operators']).exists()
 
-        # 2. Ініціалізуємо двигун (без параметрів відео)
+        # 2. Для ГОСТЯ — перевіряємо ліміт безкоштовних розпізнавань
+        if not is_staff:
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            if profile.free_recognitions_used >= 1:
+                return Response(
+                    {"limit_reached": True, "message": "Безкоштовний ліміт вичерпано"}
+                )
+
+        # 3. Ініціалізуємо двигун (без параметрів відео)
         engine = VisionEngine()
         
-        # 3. Викликаємо аналіз — для гостя НЕ зберігаємо в архів
+        # 4. Викликаємо аналіз — для гостя НЕ зберігаємо в архів
         analysis = engine.analyze_single_photo(image_file, save_to_archive=is_staff)
 
+        # 5. Інкрементуємо лічильник для гостя після успішного розпізнавання
         if not is_staff:
+            profile.free_recognitions_used += 1
+            profile.save()
             # Для ГОСТЯ: повертаємо тільки технічні дані розпізнавання
             return Response({
                 "plate_text": analysis.get("plate_text"),

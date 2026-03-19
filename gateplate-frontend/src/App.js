@@ -10,6 +10,7 @@ import Signup from './pages/Login/Signup';
 import GuestRegistration from './pages/RegisterCar/GuestRegistration';
 import PhotoRecognition from './pages/PhotoRecognition/PhotoRecognition'; 
 import { DataProvider } from './DataContext';
+import Footer from './components/Footer';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -108,6 +109,7 @@ function App() {
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>
+          <Footer />
         </div>
       </Router>
     </DataProvider>
