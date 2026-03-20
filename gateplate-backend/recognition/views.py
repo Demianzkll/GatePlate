@@ -1,5 +1,6 @@
 import threading
 import time
+from datetime import timedelta
 from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework import viewsets, status, generics, permissions
@@ -9,7 +10,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 
-from .models import DetectedPlate, Vehicle, Camera, BlackList, Employee, Department, UserProfile
+from .models import DetectedPlate, Vehicle, Camera, BlackList, Employee, Department, UserProfile, APIKey
 from .serializers import (
     DetectedPlateSerializer, 
     EmployeeSerializer, 
@@ -244,6 +245,36 @@ class VehicleStatusUpdateView(APIView):
             BlackList.objects.filter(plate_text=plate).delete()
             return Response({"status": "unblocked"})
         return Response({"error": "Invalid action"}, status=400)
+
+
+class IssueAPIKeyView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        plan = request.data.get('plan')
+        durations = {
+            '1_month': 30,
+            '3_months': 90,
+            '1_year': 365,
+        }
+        days = durations.get(plan)
+        if not days:
+            return Response({"error": "Невірний тариф"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.utils.timezone import now
+        expires = now() + timedelta(days=days)
+
+        api_key = APIKey.objects.create(
+            user=request.user,
+            expires_at=expires,
+            plan=plan,
+        )
+
+        return Response({
+            "api_key": str(api_key.key),
+            "expires_at": api_key.expires_at.isoformat(),
+            "plan": plan,
+        })
     
 
 class PhotoRecognitionAPIView(APIView):
@@ -260,8 +291,14 @@ class PhotoRecognitionAPIView(APIView):
         # 1. Перевіряємо роль користувача ДО аналізу
         is_staff = user.groups.filter(name__in=['Administrators', 'Operators']).exists()
 
-        # 2. Для ГОСТЯ — перевіряємо ліміт безкоштовних розпізнавань
-        if not is_staff:
+        # 2. Перевіряємо чи є активний API-ключ
+        from django.utils.timezone import now
+        has_active_key = APIKey.objects.filter(
+            user=user, is_active=True, expires_at__gt=now()
+        ).exists()
+
+        # 3. Для ГОСТЯ без ключа — перевіряємо ліміт безкоштовних розпізнавань
+        if not is_staff and not has_active_key:
             profile, _ = UserProfile.objects.get_or_create(user=user)
             if profile.free_recognitions_used >= 1:
                 return Response(
@@ -274,11 +311,13 @@ class PhotoRecognitionAPIView(APIView):
         # 4. Викликаємо аналіз — для гостя НЕ зберігаємо в архів
         analysis = engine.analyze_single_photo(image_file, save_to_archive=is_staff)
 
-        # 5. Інкрементуємо лічильник для гостя після успішного розпізнавання
-        if not is_staff:
+        # 5. Для ГОСТЯ без ключа — інкрементуємо лічильник
+        if not is_staff and not has_active_key:
             profile.free_recognitions_used += 1
             profile.save()
-            # Для ГОСТЯ: повертаємо тільки технічні дані розпізнавання
+
+        # 6. Для ГОСТЯ (з ключем або без): повертаємо тільки технічні дані
+        if not is_staff:
             return Response({
                 "plate_text": analysis.get("plate_text"),
                 "confidence": analysis.get("confidence"),

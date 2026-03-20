@@ -9,7 +9,8 @@ from .views import (
     DepartmentListView,
     VehicleViewSet,
     GuestVehicleCreateView,
-    PhotoRecognitionAPIView
+    PhotoRecognitionAPIView,
+    IssueAPIKeyView
 )
 from rest_framework.routers import DefaultRouter
 
@@ -26,5 +27,6 @@ urlpatterns = [
     path('departments/', DepartmentListView.as_view(), name='department-list'),
     path('guest/register/', GuestVehicleCreateView.as_view(), name='guest-vehicle-register'),
     path('recognize-photo/', PhotoRecognitionAPIView.as_view(), name='recognize-photo'),
+    path('issue-api-key/', IssueAPIKeyView.as_view(), name='issue-api-key'),
     path('', include(router.urls)),
 ]

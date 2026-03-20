@@ -1,8 +1,14 @@
-import React, { useState, useRef, useContext } from 'react'; // Додано useContext
+import React, { useState, useRef, useContext } from 'react';
 import axios from 'axios';
-import { DataContext } from '../../DataContext'; // Імпортуємо контекст даних
-import { Upload, Camera, CheckCircle, XCircle, User, Phone, ShieldCheck, Lock, Zap, X } from 'lucide-react';
+import { DataContext } from '../../DataContext';
+import { Upload, Camera, CheckCircle, XCircle, User, Phone, ShieldCheck, Lock, Zap, X, Key, Copy, Clock } from 'lucide-react';
 import './PhotoRecognition.css';
+
+const PLANS = [
+    { id: '1_month', label: '1 місяць', price: '199 ₴', days: 30 },
+    { id: '3_months', label: '3 місяці', price: '499 ₴', days: 90, popular: true },
+    { id: '1_year', label: '1 рік', price: '1499 ₴', days: 365 },
+];
 
 const PhotoRecognition = () => {
     const [file, setFile] = useState(null);
@@ -10,10 +16,13 @@ const PhotoRecognition = () => {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showPlans, setShowPlans] = useState(false);
+    const [apiKeyResult, setApiKeyResult] = useState(null);
+    const [planLoading, setPlanLoading] = useState(null);
+    const [copied, setCopied] = useState(false);
     const fileInputRef = useRef(null);
 
-    // Отримуємо роль користувача з контексту
-    const { userRole } = useContext(DataContext); 
+    const { userRole } = useContext(DataContext);
     const isStaff = userRole === 'Administrators' || userRole === 'Operators';
 
     const handleFileChange = (e) => {
@@ -35,7 +44,7 @@ const PhotoRecognition = () => {
             const res = await axios.post('http://127.0.0.1:8000/api/recognize-photo/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            
+
             if (res.data.limit_reached) {
                 setShowPaymentModal(true);
             } else {
@@ -49,7 +58,33 @@ const PhotoRecognition = () => {
         }
     };
 
-    console.log("Поточний результат у React:", result);
+    const handleSelectPlan = async (planId) => {
+        setPlanLoading(planId);
+        try {
+            const res = await axios.post('http://127.0.0.1:8000/api/issue-api-key/', { plan: planId });
+            setApiKeyResult(res.data);
+        } catch (err) {
+            console.error(err);
+            alert("Помилка при отриманні API-ключа.");
+        } finally {
+            setPlanLoading(null);
+        }
+    };
+
+    const handleCopyKey = () => {
+        if (apiKeyResult?.api_key) {
+            navigator.clipboard.writeText(apiKeyResult.api_key);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const handleCloseModal = () => {
+        setShowPaymentModal(false);
+        setShowPlans(false);
+        setApiKeyResult(null);
+        setCopied(false);
+    };
 
     return (
         <div className="photo-recon-container">
@@ -65,19 +100,19 @@ const PhotoRecognition = () => {
                         <Upload size={48} color="#00BFA5" />
                         <h3>Натисніть для завантаження</h3>
                         <p>або перетягніть файл сюди</p>
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            onChange={handleFileChange} 
-                            accept="image/*" 
-                            hidden 
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            accept="image/*"
+                            hidden
                         />
                     </div>
                 ) : (
                     <div className="preview-container-minimal">
                         <img src={preview} alt="Preview" className="img-preview" />
                         <div className="preview-actions">
-                            <button className="btn-secondary" onClick={() => {setPreview(null); setFile(null); setResult(null);}}>
+                            <button className="btn-secondary" onClick={() => { setPreview(null); setFile(null); setResult(null); }}>
                                 Скасувати
                             </button>
                             <button className="guest-submit-btn" onClick={handleProcess} disabled={loading}>
@@ -94,11 +129,10 @@ const PhotoRecognition = () => {
                             <span className="plate-number-res">{result.plate_text}</span>
                         </div>
 
-                        {/* ПРЯМА ПЕРЕВІРКА: якщо є ім'я — показуємо деталі */}
                         {(isStaff || result.owner_name) ? (
                             <div className="result-details staff-info">
                                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '15px 0' }}></div>
-                                
+
                                 <div className="detail-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                                     <User size={18} color="#00BFA5" />
                                     <div>
@@ -121,9 +155,9 @@ const PhotoRecognition = () => {
                                         <span>{Math.round(result.confidence * 100)}%</span>
                                     </div>
                                     <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-                                        <div style={{ 
-                                            width: `${result.confidence * 100}%`, 
-                                            height: '100%', 
+                                        <div style={{
+                                            width: `${result.confidence * 100}%`,
+                                            height: '100%',
                                             background: '#00BFA5',
                                             transition: 'width 0.5s ease'
                                         }}></div>
@@ -143,44 +177,120 @@ const PhotoRecognition = () => {
 
             {/* МОДАЛЬНЕ ВІКНО ОПЛАТИ */}
             {showPaymentModal && (
-                <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
+                <div className="payment-modal-overlay" onClick={handleCloseModal}>
                     <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
-                        <button className="modal-close-btn" onClick={() => setShowPaymentModal(false)}>
+                        <button className="modal-close-btn" onClick={handleCloseModal}>
                             <X size={20} />
                         </button>
-                        
-                        <div className="modal-icon-wrapper">
-                            <div className="modal-icon-glow"></div>
-                            <Lock size={40} color="#00BFA5" />
-                        </div>
-                        
-                        <h2 className="modal-title">Безкоштовний ліміт<br/><span>вичерпано</span></h2>
-                        
-                        <p className="modal-description">
-                            Ви використали свою безкоштовну спробу розпізнавання номерного знаку.
-                        </p>
 
-                        <div className="modal-promo-card">
-                            <Zap size={20} color="#facc15" />
-                            <p>
-                                Отримавши <strong>платну версію</strong>, ви отримаєте <strong>API-ключ</strong> та 
-                                <strong> нескінченну кількість спроб</strong> розпізнавання номерних знаків.
-                            </p>
-                        </div>
+                        {/* --- СТАН 3: API-ключ отримано --- */}
+                        {apiKeyResult ? (
+                            <div className="api-key-success animate-fade-in">
+                                <div className="modal-icon-wrapper">
+                                    <div className="modal-icon-glow success-glow"></div>
+                                    <Key size={40} color="#10b981" />
+                                </div>
 
-                        <div className="modal-features">
-                            <div className="modal-feature"><CheckCircle size={16} color="#10b981" /><span>Необмежене розпізнавання</span></div>
-                            <div className="modal-feature"><CheckCircle size={16} color="#10b981" /><span>Персональний API-ключ</span></div>
-                            <div className="modal-feature"><CheckCircle size={16} color="#10b981" /><span>Пріоритетна підтримка</span></div>
-                        </div>
+                                <h2 className="modal-title">API-ключ<br /><span style={{ color: '#10b981' }}>активовано!</span></h2>
 
-                        <button className="modal-buy-btn" onClick={() => {}}>
-                            Оформити
-                        </button>
-                        
-                        <button className="modal-cancel-btn" onClick={() => setShowPaymentModal(false)}>
-                            Пізніше
-                        </button>
+                                <p className="modal-description">
+                                    Ваш персональний ключ доступу до системи розпізнавання:
+                                </p>
+
+                                <div className="api-key-display">
+                                    <code className="api-key-value">{apiKeyResult.api_key}</code>
+                                    <button className="api-key-copy-btn" onClick={handleCopyKey}>
+                                        <Copy size={16} />
+                                        {copied ? 'Скопійовано!' : 'Копіювати'}
+                                    </button>
+                                </div>
+
+                                <div className="api-key-meta">
+                                    <div className="api-key-meta-item">
+                                        <Clock size={14} color="#94a3b8" />
+                                        <span>Дійсний до: {new Date(apiKeyResult.expires_at).toLocaleDateString('uk-UA')}</span>
+                                    </div>
+                                </div>
+
+                                <button className="modal-buy-btn" onClick={handleCloseModal} style={{ marginTop: '1.2rem' }}>
+                                    Почати роботу
+                                </button>
+                            </div>
+
+                        ) : showPlans ? (
+                            /* --- СТАН 2: Вибір тарифу --- */
+                            <div className="plans-view animate-fade-in">
+                                <div className="modal-icon-wrapper">
+                                    <div className="modal-icon-glow"></div>
+                                    <ShieldCheck size={40} color="#00BFA5" />
+                                </div>
+
+                                <h2 className="modal-title">Оберіть<br /><span>тарифний план</span></h2>
+
+                                <p className="modal-description">
+                                    Після вибору плану ви одразу отримаєте API-ключ та необмежений доступ.
+                                </p>
+
+                                <div className="plan-cards-container">
+                                    {PLANS.map((plan) => (
+                                        <button
+                                            key={plan.id}
+                                            className={`plan-card ${plan.popular ? 'plan-card-popular' : ''}`}
+                                            onClick={() => handleSelectPlan(plan.id)}
+                                            disabled={planLoading !== null}
+                                        >
+                                            {plan.popular && <span className="plan-badge">Популярний</span>}
+                                            <span className="plan-label">{plan.label}</span>
+                                            <span className="plan-price">{plan.price}</span>
+                                            <span className="plan-per-day">
+                                                {planLoading === plan.id ? 'Обробка...' : `${Math.round(parseInt(plan.price) / plan.days)} ₴/день`}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <button className="modal-cancel-btn" onClick={() => setShowPlans(false)}>
+                                    ← Назад
+                                </button>
+                            </div>
+
+                        ) : (
+                            /* --- СТАН 1: Початковий (ліміт вичерпано) --- */
+                            <>
+                                <div className="modal-icon-wrapper">
+                                    <div className="modal-icon-glow"></div>
+                                    <Lock size={40} color="#00BFA5" />
+                                </div>
+
+                                <h2 className="modal-title">Безкоштовний ліміт<br /><span>вичерпано</span></h2>
+
+                                <p className="modal-description">
+                                    Ви використали свою безкоштовну спробу розпізнавання номерного знаку.
+                                </p>
+
+                                <div className="modal-promo-card">
+                                    <Zap size={20} color="#facc15" />
+                                    <p>
+                                        Отримавши <strong>платну версію</strong>, ви отримаєте <strong>API-ключ</strong> та
+                                        <strong> нескінченну кількість спроб</strong> розпізнавання номерних знаків.
+                                    </p>
+                                </div>
+
+                                <div className="modal-features">
+                                    <div className="modal-feature"><CheckCircle size={16} color="#10b981" /><span>Необмежене розпізнавання</span></div>
+                                    <div className="modal-feature"><CheckCircle size={16} color="#10b981" /><span>Персональний API-ключ</span></div>
+                                    <div className="modal-feature"><CheckCircle size={16} color="#10b981" /><span>Пріоритетна підтримка</span></div>
+                                </div>
+
+                                <button className="modal-buy-btn" onClick={() => setShowPlans(true)}>
+                                    Оформити
+                                </button>
+
+                                <button className="modal-cancel-btn" onClick={handleCloseModal}>
+                                    Пізніше
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

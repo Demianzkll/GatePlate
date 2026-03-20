@@ -356,3 +356,159 @@
 .modal-cancel-btn:hover {
     color: #94a3b8;
 }
+
+
+/* ===== ТАРИФНІ КАРТКИ ===== */
+
+.plan-cards-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1.2rem;
+    width: 100%;
+}
+
+.plan-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 18px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.6);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.plan-card:hover {
+    border-color: rgba(0, 191, 165, 0.4);
+    background: rgba(0, 191, 165, 0.06);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 191, 165, 0.15);
+}
+
+.plan-card:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+/* Популярний план */
+.plan-card-popular {
+    border-color: rgba(0, 191, 165, 0.35);
+    background: rgba(0, 191, 165, 0.08);
+}
+
+.plan-card-popular::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #00BFA5, #4DD0E1);
+}
+
+.plan-badge {
+    position: absolute;
+    top: 6px;
+    right: -22px;
+    background: linear-gradient(135deg, #00BFA5, #4DD0E1);
+    color: #fff;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 2px 24px;
+    transform: rotate(45deg);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.plan-label {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.plan-price {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.5px;
+}
+
+.plan-per-day {
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+
+/* ===== API-КЛЮЧ РЕЗУЛЬТАТ ===== */
+
+.api-key-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.success-glow {
+    background: rgba(16, 185, 129, 0.15) !important;
+}
+
+.api-key-display {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.api-key-value {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    color: #10b981;
+    word-break: break-all;
+    text-align: center;
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+}
+
+.api-key-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    color: #10b981;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.api-key-copy-btn:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.api-key-meta {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+
+.api-key-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #94a3b8;
+    font-size: 0.8rem;
+}

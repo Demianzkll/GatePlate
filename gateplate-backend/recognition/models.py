@@ -156,12 +156,25 @@ class DetectedPlate(models.Model):
 
 
 class APIKey(models.Model):
+    PLAN_CHOICES = [
+        ('1_month', '1 місяць'),
+        ('3_months', '3 місяці'),
+        ('1_year', '1 рік'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='api_keys')
     key = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     is_active = models.BooleanField(default=True)
-    requests_limit = models.IntegerField(default=50) # Безкоштовний ліміт для тесту
+    requests_limit = models.IntegerField(default=50)
     requests_used = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Дійсний до")
+    plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default='1_month', verbose_name="Тарифний план")
+
+    @property
+    def is_valid(self):
+        from django.utils.timezone import now
+        return self.is_active and (self.expires_at is None or self.expires_at > now())
 
     def __str__(self):
-        return f"{self.user.username} - {self.key}"
+        return f"{self.user.username} - {self.key} ({self.get_plan_display()})"
