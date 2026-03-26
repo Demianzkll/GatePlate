@@ -4,6 +4,7 @@ gateplate-backend/*.py[cod]
 gateplate-backend/db.sqlite3
 gateplate-backend/media/detections/
 __pycache__/
+.coverage
 
 # --- GatePlate Frontend (React) ---
 gateplate-frontend/node_modules/

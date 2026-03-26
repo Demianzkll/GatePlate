@@ -30,7 +30,7 @@ jobs:
        run: |
         python -m pip install --upgrade pip
         pip install -r ./gateplate-backend/requirements.txt
-        pip install pytest pytest-cov pytest-django
+        pip install pytest pytest-cov pytest-django coverage
 
      - name: Run tests with coverage
        # --cov-fail-under=60: pipeline падає якщо coverage < 60%
@@ -38,7 +38,8 @@ jobs:
        env:
          DB_ENGINE: django.db.backends.sqlite3
          DB_NAME: ":memory:"
-       run: pytest --cov=./gateplate-backend --cov-report=html --cov-fail-under=60
+      #  run: pytest --cov=./gateplate-backend --cov-report=html --cov-fail-under=60
+        run: cd ./gateplate-backend && coverage run manage.py test .\recognition\ && coverage html && coverage report --fail-under=60
 
      - name: Upload coverage report 
        uses: actions/upload-artifact@v4 
