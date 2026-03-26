@@ -70,7 +70,7 @@ jobs:
         #non-blocking: якщо якийсь інструмент не встановився, не зупиняємо весь workflow
         
       - name: Flake8 — PEP8 стиль і синтаксис
-        run: flake8 ./gateplate-backend
+        run: flake8 --config ./gateplate-backend/.flake8 ./gateplate-backend
 
       - name: Black — перевірка форматування
         # --check: тільки перевіряє, не змінює файли
