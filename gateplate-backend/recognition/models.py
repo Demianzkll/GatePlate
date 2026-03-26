@@ -1,17 +1,21 @@
-from django.db import models
-from django.conf import settings 
-from django.contrib.auth.models import User
 import uuid
+
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.db import models
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, related_name='profile', on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, related_name="profile", on_delete=models.CASCADE
+    )
     phone = models.CharField(max_length=20, blank=True, null=True)
-    free_recognitions_used = models.IntegerField(default=0, verbose_name="Використано безкоштовних розпізнавань")
+    free_recognitions_used = models.IntegerField(
+        default=0, verbose_name="Використано безкоштовних розпізнавань"
+    )
 
     def __str__(self):
         return f"Профіль: {self.user.username}"
-
 
 
 class Camera(models.Model):
@@ -24,16 +28,15 @@ class Camera(models.Model):
         return self.name
 
 
-
 class Department(models.Model):
     name = models.CharField(max_length=255, verbose_name="Назва підрозділу")
     parent = models.ForeignKey(
-        'self', 
-        on_delete=models.CASCADE, 
-        null=True, 
-        blank=True, 
-        related_name='subsections',
-        verbose_name="Входить до підрозділу"
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="subsections",
+        verbose_name="Входить до підрозділу",
     )
 
     def __str__(self):
@@ -46,16 +49,12 @@ class Department(models.Model):
         verbose_name_plural = "Підрозділи"
 
 
-
-
 class Employee(models.Model):
-    photo = models.ImageField(upload_to='employees/', null=True, blank=True)    
+    photo = models.ImageField(upload_to="employees/", null=True, blank=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     department = models.ForeignKey(
-        Department, 
-        on_delete=models.PROTECT, 
-        verbose_name="Підрозділ"
+        Department, on_delete=models.PROTECT, verbose_name="Підрозділ"
     )
     phone = models.CharField(max_length=20, blank=True, null=True)
 
@@ -67,30 +66,35 @@ class Employee(models.Model):
         verbose_name_plural = "Працівники"
 
 
-
 class Vehicle(models.Model):
     employee = models.ForeignKey(
-        Employee, 
-        on_delete=models.CASCADE, 
-        related_name='vehicles', 
-        verbose_name="Співробітник", 
-        null=True, 
-        blank=True
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="vehicles",
+        verbose_name="Співробітник",
+        null=True,
+        blank=True,
     )
-    
+
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        verbose_name="Зареєстрував (Користувач)"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Зареєстрував (Користувач)",
     )
-    
+
     plate_text = models.CharField(max_length=20, unique=True, verbose_name="Номер авто")
-    brand_model = models.CharField(max_length=100, blank=True, verbose_name="Марка/Модель")
-    
-    owner_first_name = models.CharField(max_length=50, verbose_name="Ім'я власника", default="Гість")
-    owner_last_name = models.CharField(max_length=50, verbose_name="Прізвище власника", default="Невідомо")
+    brand_model = models.CharField(
+        max_length=100, blank=True, verbose_name="Марка/Модель"
+    )
+
+    owner_first_name = models.CharField(
+        max_length=50, verbose_name="Ім'я власника", default="Гість"
+    )
+    owner_last_name = models.CharField(
+        max_length=50, verbose_name="Прізвище власника", default="Невідомо"
+    )
 
     def __str__(self):
         if self.employee:
@@ -98,19 +102,21 @@ class Vehicle(models.Model):
         return f"{self.plate_text} ({self.owner_last_name} {self.owner_first_name})"
 
 
-
 class AccessPermit(models.Model):
-    vehicle = models.OneToOneField(Vehicle, on_delete=models.CASCADE, verbose_name="Автомобіль")
+    vehicle = models.OneToOneField(
+        Vehicle, on_delete=models.CASCADE, verbose_name="Автомобіль"
+    )
     is_allowed = models.BooleanField(default=True, verbose_name="Дозвіл")
     end_date = models.DateField(null=True, blank=True, verbose_name="Дійсний до")
 
     def __str__(self):
         return f"Дозвіл {self.vehicle.plate_text}"
-    
 
 
 class BlackList(models.Model):
-    plate_text = models.CharField(max_length=20, unique=True, verbose_name="Номер у чорному списку")
+    plate_text = models.CharField(
+        max_length=20, unique=True, verbose_name="Номер у чорному списку"
+    )
     added_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата додавання")
 
     class Meta:
@@ -119,59 +125,70 @@ class BlackList(models.Model):
 
     def __str__(self):
         return f"BLOCK: {self.plate_text}"
-    
-
 
 
 class DetectedPlate(models.Model):
-    camera = models.ForeignKey(Camera, on_delete=models.SET_NULL, null=True, verbose_name="Камера")
-    plate_text = models.CharField(max_length=20, verbose_name="Розпізнаний номер")
-    
-    vehicle = models.ForeignKey(
-        'Vehicle', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        related_name='detections', 
-        verbose_name="Розпізнане авто"
+    camera = models.ForeignKey(
+        Camera, on_delete=models.SET_NULL, null=True, verbose_name="Камера"
     )
-    
-    image = models.ImageField(upload_to='detections/%Y/%m/%d/', verbose_name="Фото фіксації", null=True, blank=True)
+    plate_text = models.CharField(max_length=20, verbose_name="Розпізнаний номер")
+
+    vehicle = models.ForeignKey(
+        "Vehicle",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="detections",
+        verbose_name="Розпізнане авто",
+    )
+
+    image = models.ImageField(
+        upload_to="detections/%Y/%m/%d/",
+        verbose_name="Фото фіксації",
+        null=True,
+        blank=True,
+    )
     confidence = models.FloatField(verbose_name="Впевненість")
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Час події")
 
     class Meta:
         verbose_name = "Розпізнаний номер"
         verbose_name_plural = "Розпізнані номери"
-        ordering = ['-timestamp'] 
+        ordering = ["-timestamp"]
 
     @property
     def is_known(self):
         return self.vehicle is not None
-    
+
     def __str__(self):
         return f"{self.plate_text} - {self.timestamp.strftime('%H:%M:%S')}"
 
 
 class APIKey(models.Model):
     PLAN_CHOICES = [
-        ('1_month', '1 місяць'),
-        ('3_months', '3 місяці'),
-        ('1_year', '1 рік'),
+        ("1_month", "1 місяць"),
+        ("3_months", "3 місяці"),
+        ("1_year", "1 рік"),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='api_keys')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="api_keys")
     key = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     is_active = models.BooleanField(default=True)
     requests_limit = models.IntegerField(default=50)
     requests_used = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Дійсний до")
-    plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default='1_month', verbose_name="Тарифний план")
+    plan = models.CharField(
+        max_length=20,
+        choices=PLAN_CHOICES,
+        default="1_month",
+        verbose_name="Тарифний план",
+    )
 
     @property
     def is_valid(self):
         from django.utils.timezone import now
+
         return self.is_active and (self.expires_at is None or self.expires_at > now())
 
     def __str__(self):

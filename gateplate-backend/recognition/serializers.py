@@ -1,39 +1,42 @@
+from django.contrib.auth.models import Group, User
+
 from rest_framework import serializers
-from .models import Employee, Vehicle, DetectedPlate, Camera, Department, UserProfile
-from django.contrib.auth.models import User
-from django.contrib.auth.models import User, Group
+
+from .models import Department, DetectedPlate, Employee, UserProfile, Vehicle
+
 
 class EmployeeSerializer(serializers.ModelSerializer):
     has_details = serializers.SerializerMethodField()
-    root_department = serializers.CharField(source='department.parent.name', default=None)
-    specific_department = serializers.CharField(source='department.name', default=None)
+    root_department = serializers.CharField(
+        source="department.parent.name", default=None
+    )
+    specific_department = serializers.CharField(source="department.name", default=None)
 
     class Meta:
         model = Employee
-        fields = '__all__'
+        fields = "__all__"
 
     def get_has_details(self, obj):
         # Якщо у відділу є батько, значить це "специфічний відділ" і треба показувати деталі
         return obj.department and obj.department.parent is not None
-    
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
-        fields = ['id', 'name', 'parent']
+        fields = ["id", "name", "parent"]
 
 
 class VehicleSerializer(serializers.ModelSerializer):
     # Використовуємо безпечний метод замість ReadOnlyField
     owner_name = serializers.SerializerMethodField()
-    
+
     # Якщо фронтенду потрібні деталі про працівника (опціонально)
-    employee_details = EmployeeSerializer(source='employee', read_only=True)
+    employee_details = EmployeeSerializer(source="employee", read_only=True)
 
     class Meta:
         model = Vehicle
-        fields = '__all__'
+        fields = "__all__"
 
     # Ця функція безпечно формує ПІБ і ніколи не видасть помилку JSON
     def get_owner_name(self, obj):
@@ -47,17 +50,20 @@ class VehicleSerializer(serializers.ModelSerializer):
         return value.upper().strip()
 
 
-
 class DetectedPlateSerializer(serializers.ModelSerializer):
     vehicle = VehicleSerializer(read_only=True)
-    camera_name = serializers.CharField(source='camera.name', read_only=True)
+    camera_name = serializers.CharField(source="camera.name", read_only=True)
 
     class Meta:
         model = DetectedPlate
-        fields = ['id', 'plate_text', 'timestamp', 'confidence', 'vehicle', 'camera_name']
-
-    
-
+        fields = [
+            "id",
+            "plate_text",
+            "timestamp",
+            "confidence",
+            "vehicle",
+            "camera_name",
+        ]
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -66,19 +72,19 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'password', 'first_name', 'last_name', 'phone')
+        fields = ("username", "password", "first_name", "last_name", "phone")
 
     def create(self, validated_data):
-        phone = validated_data.pop('phone')
-        password = validated_data.pop('password')
-        
+        phone = validated_data.pop("phone")
+        password = validated_data.pop("password")
+
         user = User.objects.create(**validated_data)
         user.set_password(password)
         user.save()
 
         UserProfile.objects.create(user=user, phone=phone)
 
-        guest_group, created = Group.objects.get_or_create(name='Guests')
+        guest_group, created = Group.objects.get_or_create(name="Guests")
         user.groups.add(guest_group)
 
         return user

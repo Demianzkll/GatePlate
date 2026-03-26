@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Employee, Vehicle, DetectedPlate, Camera, Department
+
+from .models import Camera, Department, DetectedPlate, Employee, Vehicle
 
 # Register your models here.
 
