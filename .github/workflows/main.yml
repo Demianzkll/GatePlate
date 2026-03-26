@@ -31,13 +31,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r ./gateplate-backend/requirements.txt
         pip install pytest coverage pytest-cov pytest-django
+
      - name: Run tests with coverage
        # --cov-fail-under=60: pipeline падає якщо coverage < 60%
        # DB_ENGINE=sqlite3: use SQLite in CI (no MySQL service needed)
        env:
          DB_ENGINE: django.db.backends.sqlite3
          DB_NAME: ":memory:"
-      #  run: pytest --cov=./gateplate-backend --cov-report=html --cov-fail-under=60
         run: cd ./gateplate-backend && coverage run manage.py test ./recognition/ && coverage html && coverage report --fail-under=60
 
      - name: Upload coverage report 
