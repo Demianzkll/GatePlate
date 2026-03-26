@@ -43,14 +43,12 @@ function App() {
     );
   }
 
-  // Блок для авторизованих користувачів
   return (
     <DataProvider>
       <Router>
         <div className="App">
           <nav className="navbar">
             <div className="nav-container">
-              {/* Логотип */}
               <Link to="/" className="logo-link">
                 <div className="logo">
                   <img src="/logo.png" alt="Logo" />
@@ -59,7 +57,6 @@ function App() {
               </Link>
 
               <div className="nav-buttons">
-                {/* Навігація для Персоналу (Адмін + Оператор) */}
                 {isStaff ? (
                   <>
                     <NavLink to="/" className="nav-item">Моніторинг</NavLink>
@@ -82,7 +79,6 @@ function App() {
 
           <main className="content">
             <Routes>
-              {/* Головна сторінка (Моніторинг) */}
               <Route path="/" element={
                 isStaff ? <Home /> : <Navigate to="/guest-registration" />
               } />

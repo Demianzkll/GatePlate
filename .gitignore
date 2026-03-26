@@ -1,9 +1,9 @@
 # --- Python / Django ---
 gateplate-backend/.venv/
-gateplate-backend/__pycache__/
 gateplate-backend/*.py[cod]
 gateplate-backend/db.sqlite3
 gateplate-backend/media/detections/
+__pycache__/
 
 # --- GatePlate Frontend (React) ---
 gateplate-frontend/node_modules/

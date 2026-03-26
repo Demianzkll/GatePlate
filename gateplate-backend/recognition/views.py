@@ -127,31 +127,28 @@ class PlateConfirmView(APIView):
         if not temp_data:
             return Response({"error": "No cached data found"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 1. Отримуємо або створюємо камеру
         camera_obj, _ = Camera.objects.get_or_create(name=f"Камера: {video_name}")
         
-        # 2. Шукаємо автомобіль у базі за номером
         vehicle_obj = Vehicle.objects.filter(plate_text=plate_text).first()
         
-        # 3. Створюємо запис в архіві (DetectedPlate)
-        # Ми прибираємо 'plate_number' та 'status', бо їх немає в моделі
         new_record = DetectedPlate.objects.create(
             camera=camera_obj,
-            plate_text=plate_text,  # Виправлено з plate_number на plate_text
+            plate_text=plate_text,  
             confidence=temp_data.get('conf', 0.0),
-            vehicle=vehicle_obj     # Передаємо знайдений об'єкт або None
+            vehicle=vehicle_obj    
         )
 
-        # 4. Зберігаємо фото, якщо воно є в кеші
         if 'image_content' in temp_data:
             new_record.image.save(f"{plate_text}_manual.jpg", temp_data['image_content'], save=True)
 
-        # 5. Очищуємо тимчасові дані
         live_previews.pop(video_name, None)
         temp_best_frames.pop(video_name, None)
         
         return Response({"status": "saved"})
     
+
+
+
 # --- EMPLOYEE CRUD VIEWS ---
 
 class EmployeeListCreateView(generics.ListCreateAPIView):
@@ -189,7 +186,6 @@ class VehicleViewSet(viewsets.ModelViewSet):
     serializer_class = VehicleSerializer
 
     def get_permissions(self):
-        # Гість може тільки перевіряти номер, але не бачити весь список
         if self.action == 'check_plate':
             return [permissions.IsAuthenticated()]
         return [IsStaffUser()]
@@ -279,7 +275,7 @@ class IssueAPIKeyView(APIView):
 
 class PhotoRecognitionAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser] # Необхідно для завантаження файлів
+    parser_classes = [MultiPartParser] 
 
     def post(self, request):
         user = request.user
@@ -288,16 +284,13 @@ class PhotoRecognitionAPIView(APIView):
         if not image_file:
             return Response({"error": "Файл не завантажено"}, status=400)
 
-        # 1. Перевіряємо роль користувача ДО аналізу
         is_staff = user.groups.filter(name__in=['Administrators', 'Operators']).exists()
 
-        # 2. Перевіряємо чи є активний API-ключ
         from django.utils.timezone import now
         has_active_key = APIKey.objects.filter(
             user=user, is_active=True, expires_at__gt=now()
         ).exists()
 
-        # 3. Для ГОСТЯ без ключа — перевіряємо ліміт безкоштовних розпізнавань
         if not is_staff and not has_active_key:
             profile, _ = UserProfile.objects.get_or_create(user=user)
             if profile.free_recognitions_used >= 1:
@@ -305,18 +298,14 @@ class PhotoRecognitionAPIView(APIView):
                     {"limit_reached": True, "message": "Безкоштовний ліміт вичерпано"}
                 )
 
-        # 3. Ініціалізуємо двигун (без параметрів відео)
         engine = VisionEngine()
         
-        # 4. Викликаємо аналіз — для гостя НЕ зберігаємо в архів
         analysis = engine.analyze_single_photo(image_file, save_to_archive=is_staff)
 
-        # 5. Для ГОСТЯ без ключа — інкрементуємо лічильник
         if not is_staff and not has_active_key:
             profile.free_recognitions_used += 1
             profile.save()
 
-        # 6. Для ГОСТЯ (з ключем або без): повертаємо тільки технічні дані
         if not is_staff:
             return Response({
                 "plate_text": analysis.get("plate_text"),
@@ -326,5 +315,9 @@ class PhotoRecognitionAPIView(APIView):
                 "owner_phone": None
             })
 
-        # Для АДМІНА/ОПЕРАТОРА: повертаємо все, що знайшов двигун
         return Response(analysis)
+    
+
+
+
+

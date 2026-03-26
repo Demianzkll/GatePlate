@@ -2,14 +2,11 @@ import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 export const DataContext = createContext();
-
 export const DataProvider = ({ children }) => {
-    // Глобальні стани, які будуть жити вічно (поки відкрита вкладка)
     const [selectedVideo, setSelectedVideo] = useState("");
     const [lastDetection, setLastDetection] = useState(null);
     const [livePlate, setLivePlate] = useState(null);
 
-    // Функція оновлення останньої детекції (можна викликати з будь-якої сторінки)
     const fetchLastDetection = async () => {
         try {
             const res = await axios.get('http://127.0.0.1:8000/api/detected-plates/');
@@ -32,3 +29,7 @@ export const DataProvider = ({ children }) => {
         </DataContext.Provider>
     );
 };
+
+
+
+

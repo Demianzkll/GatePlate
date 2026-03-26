@@ -12,7 +12,6 @@ from datetime import timedelta
 from recognition.models import DetectedPlate, Camera, Vehicle, AccessPermit, BlackList
 
 
-# --- КЛАС 1: ІНСТРУМЕНТ РОЗПІЗНАВАННЯ (OCR & Computer Vision) ---
 class PlateRecognizer:
     def __init__(self, model_path):
         self.model = YOLO(model_path)
@@ -32,7 +31,6 @@ class PlateRecognizer:
     def correct_plate_text(text):
         text = text.upper()
 
-        # 1. Базова корекція кирилиці (твій існуючий код)
         replacements = {
             'О': 'O', 'А': 'A', 'В': 'B', 'Е': 'E',
             'Н': 'H', 'К': 'K', 'М': 'M', 'Р': 'P',
@@ -42,18 +40,12 @@ class PlateRecognizer:
         for k, v in replacements.items():
             text = text.replace(k, v)
 
-        # 2. Очищення від усього, крім літер та цифр
         text = re.sub(r'[^A-Z0-9]', '', text)
-
-        # 3. ФІКС ШУМУ НА КРАЯХ: Якщо номер задовгий (9 або 10 символів)
-        # Український номер має формат XX 0000 XX.
-        # Шукаємо цей шаблон всередині зашумленого рядка.
         pattern_search = re.search(r'[A-Z]{2}\d{4}[A-Z]{2}', text)
         if pattern_search:
             print(f"[FIX] Знайдено шаблон всередині шуму: {pattern_search.group(0)}")
             return pattern_search.group(0)
 
-        # 4. Якщо шаблон не знайдено прямо, пробуємо стандартну корекцію символів
         text = text.replace('0', 'O')  
         text = text.replace('O', '0', 1) if re.match(r'[A-Z]{2}O\d', text) else text  
 
@@ -137,7 +129,6 @@ class PlateRecognizer:
             return recognized_texts[0]
 
 
-# --- КЛАС 2: МЕНЕДЖЕР ЛОГІКИ (Video, DB, API) ---
 class VisionEngine:
     def __init__(self, video_name=None, live_dict=None, cache_dict=None, model_name='best.pt'):
         self.video_name = video_name
@@ -147,7 +138,6 @@ class VisionEngine:
         model_path = os.path.join(settings.BASE_DIR, 'ai_models', model_name)
         self.model = YOLO(model_path)
         
-        # Ініціалізуємо розпізнавач всередині двигуна
         self.recognizer = PlateRecognizer(self.model)
         
         self.frame_step = 10
@@ -155,17 +145,14 @@ class VisionEngine:
 
     def analyze_single_photo(self, image_file, save_to_archive=True):
         """Аналізує фото. Зберігає в Архів тільки якщо save_to_archive=True"""
-        # 1. Декодуємо зображення
         file_bytes = np.frombuffer(image_file.read(), np.uint8)
         img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
         if img is None: 
             return {"error": "Не вдалося прочитати зображення"}
 
-        # 2. Отримуємо результат від ШІ
         plate_text, conf = self.recognizer.recognize_plate(img)
 
-        # 3. Якщо ШІ взагалі нічого не побачив
         if plate_text == "Невпізнано":
             return {
                 "plate_text": "", 
@@ -177,7 +164,6 @@ class VisionEngine:
                 "message": "ШІ не зміг прочитати текст. Введіть номер вручну."
             }
 
-        # 4. ПОШУК ВЛАСНИКА 
         vehicle = Vehicle.objects.filter(plate_text=plate_text).first()
         is_known = bool(vehicle)
         owner_name = "Невідомий"
@@ -189,10 +175,6 @@ class VisionEngine:
                 owner_phone = vehicle.employee.phone
             else:
                 owner_name = "Службове авто (без водія)"
-
-        # =======================================================
-        # 5. ЗБЕРЕЖЕННЯ В АРХІВ (тільки для staff-користувачів)
-        # =======================================================
         if save_to_archive:
             try:
                 camera_obj, _ = Camera.objects.get_or_create(name="Джерело: Фото-завантаження")
@@ -216,9 +198,6 @@ class VisionEngine:
         else:
             print(f"[SKIP] Гість — фото НЕ зберігається в архів: {plate_text}")
 
-        # =======================================================
-
-        # 6. ПОВЕРТАЄМО ДАНІ ДЛЯ ФРОНТЕНДУ
         return {
             "plate_text": plate_text,
             "confidence": round(conf, 2),
@@ -232,7 +211,6 @@ class VisionEngine:
 
 
     def check_access(self, plate_text):
-        """Перевірка статусу доступу в БД"""
         try:
             if BlackList.objects.filter(plate_text=plate_text).exists():
                 return 'blocked', "ОБ'ЄКТ ЗАБЛОКОВАНО"
@@ -251,7 +229,6 @@ class VisionEngine:
             return 'guest', "Помилка бази даних"
 
     def run(self):
-        """Основний цикл відео-аналізу"""
         video_path = os.path.join(settings.BASE_DIR, 'videos', self.video_name)
         cap = cv2.VideoCapture(video_path)
         frame_id = 0
@@ -262,31 +239,23 @@ class VisionEngine:
             if not ret or frame_id > 800: break 
 
             if frame_id % self.frame_step == 0:
-                # Отримуємо результат з кадру
                 plate_text, conf = self.recognizer.recognize_plate(frame)
-
-                # ==================================================
-                # ГОЛОВНЕ ПРАВИЛО: Ігноруємо пусті/браковані кадри
-                # ==================================================
                 if plate_text != "Невпізнано": 
                     
-                    # 1. Якщо точність висока — одразу пропускаємо (Авто-збереження)
                     if conf >= 0.8:
                         self._auto_save_record(frame, plate_text, conf)
                         was_auto_saved = True 
                         break 
 
-                    # 2. Якщо точність середня — показуємо оператору в реальному часі
                     if self.live_dict is not None:
                         self.live_dict[self.video_name] = {
-                            'plate': plate_text, # Тут буде реальний текст (напр. "BC777")
+                            'plate': plate_text, 
                             'conf': conf,
                             'needs_confirmation': False, 
                             'is_finished': False,
                             'message': "Аналізую... шукаю чіткий кадр"
                         }
 
-                    # 3. Зберігаємо найкращий результат за всю історію відео
                     if plate_text not in self.best_results or conf > self.best_results[plate_text]['conf']:
                         _, buffer = cv2.imencode('.jpg', frame)
                         self.best_results[plate_text] = {
@@ -298,8 +267,6 @@ class VisionEngine:
             frame_id += 1
         
         cap.release()
-        
-        # Коли відео закінчилось, підбиваємо підсумки (перевірка в Базі Даних)
         if not was_auto_saved: 
             self.finalize()
 
