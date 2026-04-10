@@ -1,0 +1,177 @@
+/* =============================================
+   CUSTOM VIDEO SOURCE SELECTOR
+   ============================================= */
+
+.source-selector {
+  position: relative;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.source-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 8px;
+}
+
+/* ---- TRIGGER BUTTON ---- */
+.custom-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  color: #94a3b8;
+  font-size: 0.92rem;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  box-shadow: none;
+}
+
+.custom-select-trigger:hover {
+  border-color: rgba(0, 191, 165, 0.4);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.custom-select-trigger:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: rgba(0, 191, 165, 0.5);
+}
+
+.custom-select-trigger.open {
+  border-color: #00BFA5;
+  box-shadow: 0 0 0 3px rgba(0, 191, 165, 0.12);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.custom-select-trigger.has-value {
+  color: #e2e8f0;
+}
+
+.custom-select-trigger.has-value .select-value {
+  color: #e2e8f0;
+}
+
+/* ---- ARROW ICON ---- */
+.select-arrow {
+  display: flex;
+  align-items: center;
+  color: #64748b;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.select-arrow.rotated {
+  transform: rotate(180deg);
+  color: #00BFA5;
+}
+
+/* ---- DROPDOWN MENU ---- */
+.custom-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  padding: 6px;
+  overflow: hidden;
+
+  /* Appear animation */
+  animation: dropdownSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top center;
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ---- DROPDOWN OPTION ---- */
+.custom-select-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.custom-select-option:hover {
+  background: rgba(0, 191, 165, 0.08);
+  color: #fff;
+}
+
+.custom-select-option.selected {
+  background: rgba(0, 191, 165, 0.12);
+  color: #00BFA5;
+  font-weight: 600;
+}
+
+/* ---- OPTION DOT INDICATOR ---- */
+.option-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #334155;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.custom-select-option:hover .option-dot {
+  background: rgba(0, 191, 165, 0.4);
+  box-shadow: 0 0 6px rgba(0, 191, 165, 0.3);
+}
+
+.custom-select-option.selected .option-dot {
+  background: #00BFA5;
+  box-shadow: 0 0 8px rgba(0, 191, 165, 0.5);
+}
+
+.option-label {
+  flex: 1;
+}
+
+.option-check {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+/* ---- FADE-IN ANIMATION FOR RECOGNITION RESULTS ---- */
+.animate-fade-in {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

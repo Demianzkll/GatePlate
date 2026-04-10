@@ -121,23 +121,24 @@
     letter-spacing: 1px;
 }
 
-/* Інфо для персоналу (центрування елементів) */
+/* Інфо для персоналу (вирівнювання зліва) */
 .staff-info {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 4px;
     background: rgba(15, 23, 42, 0.3);
-    padding: 15px;
+    padding: 15px 18px;
     border-radius: 8px;
     margin-top: 10px;
+    text-align: left;
 }
 
 .detail-item {
     display: flex;
-    flex-direction: column; /* Іконка над текстом або текст під текстом */
+    flex-direction: row;
     align-items: center;
-    gap: 4px;
+    gap: 10px;
 }
 
 .detail-item span:first-of-type {

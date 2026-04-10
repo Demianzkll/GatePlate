@@ -1,8 +1,7 @@
- import React, { useContext, useEffect, useState } from 'react';
-
+ import React, { useContext, useEffect, useState, useRef } from 'react';
 import { DataContext } from '../../DataContext';
-
 import axios from 'axios';
+import './Home.css';
 
 
 const Home = () => {
@@ -23,8 +22,28 @@ const Home = () => {
   // Локальні стани для редагування та інтерфейсу
 
   const [editMode, setEditMode] = useState(false);
-
   const [tempPlate, setTempPlate] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const videoOptions = [
+    { value: '', label: 'Оберіть джерело відео' },
+    { value: 'video1.mp4', label: 'Потік №1' },
+    { value: 'video2.mp4', label: 'Потік №2' },
+    { value: 'video3.mp4', label: 'Потік №3' },
+    { value: 'video4.mp4', label: 'Потік №4' },
+  ];
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
 
   // 1. Опитування Бази Даних для історії (раз на 3 сек)
@@ -245,31 +264,55 @@ const Home = () => {
 
             </div>
 
+          <div className="source-selector" ref={dropdownRef}>
+            <label className="source-label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              </svg>
+              Джерело відео
+            </label>
 
-          <div className="admin-controls" style={{ marginTop: '20px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-
-            <label style={{ color: '#ababab' }}>Джерело:</label>
-
-            <select
-
-              className="btn"
-
-              value={selectedVideo}
-
-              onChange={handleVideoChange}
-
-              style={{ background: '#1e293b', color: 'white', padding: '8px 15px' }}
-
+            <button
+              className={`custom-select-trigger ${dropdownOpen ? 'open' : ''} ${selectedVideo ? 'has-value' : ''}`}
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              type="button"
             >
+              <span className="select-value">
+                {selectedVideo
+                  ? videoOptions.find(o => o.value === selectedVideo)?.label
+                  : 'Оберіть джерело відео'
+                }
+              </span>
+              <span className={`select-arrow ${dropdownOpen ? 'rotated' : ''}`}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </button>
 
-              <option value="">--- Оберіть відео ---</option>
-              <option value="video1.mp4">Потік №1</option>
-              <option value="video2.mp4">Потік №2</option>
-              <option value="video3.mp4">Потік №3</option>
-              <option value="video4.mp4">Потік №4</option>
-
-            </select>
-
+            {dropdownOpen && (
+              <div className="custom-select-menu">
+                {videoOptions.filter(o => o.value !== '').map((option) => (
+                  <div
+                    key={option.value}
+                    className={`custom-select-option ${selectedVideo === option.value ? 'selected' : ''}`}
+                    onClick={() => {
+                      handleVideoChange({ target: { value: option.value } });
+                      setDropdownOpen(false);
+                    }}
+                  >
+                    <span className="option-dot"></span>
+                    <span className="option-label">{option.label}</span>
+                    {selectedVideo === option.value && (
+                      <svg className="option-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00BFA5" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
 
@@ -430,93 +473,91 @@ const Home = () => {
           {/* КАРТКА №2: ДАНІ ВЛАСНИКА */}
 
           <div className="card" style={{ 
-  textAlign: 'center', 
+  textAlign: 'left', 
   minHeight: '220px', 
   background: '#1E2A38', 
   border: '1px solid rgba(0, 191, 165, 0.2)' 
 }}>
-  <h4 style={{ color: '#ababab', marginBottom: '15px', fontSize: '0.9rem' }}>
-    ІНФОРМАЦІЯ ПРО ВЛАСНИКА:
+  <h4 style={{ color: '#ababab', marginBottom: '15px', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+    Інформація про власника
   </h4>
 
   {lastDetection?.vehicle ? (
     <div className="owner-data animate-fade-in">
-      {/* Контейнер для фото з бірюзовою рамкою */}
+      {/* Горизонтальний layout: фото зліва, інфо праворуч */}
       <div style={{ 
-        width: '80px', 
-        height: '80px', 
-        background: '#0f172a', 
-        borderRadius: '50%', 
-        margin: '0 auto 10px', 
         display: 'flex', 
-        justifyContent: 'center', 
         alignItems: 'center', 
-        overflow: 'hidden',
-        border: '3px solid #00BFA5', // Твій фірмовий бірюзовий колір
-        boxShadow: '0 0 15px rgba(0, 191, 165, 0.2)'
+        gap: '16px',
+        marginBottom: '12px'
       }}>
-        {lastDetection.vehicle.employee?.photo ? (
-          <img 
-            src={`http://127.0.0.1:8000${lastDetection.vehicle.employee.photo}`} 
-            alt="Owner" 
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-          />
-        ) : (
-          <span style={{ fontSize: '2rem' }}>👤</span>
-        )}
+        {/* Аватар */}
+        <div style={{ 
+          width: '64px', 
+          height: '64px', 
+          minWidth: '64px',
+          background: '#0f172a', 
+          borderRadius: '50%', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          overflow: 'hidden',
+          border: '2px solid #00BFA5',
+          boxShadow: '0 0 12px rgba(0, 191, 165, 0.2)'
+        }}>
+          {lastDetection.vehicle.employee?.photo ? (
+            <img 
+              src={`http://127.0.0.1:8000${lastDetection.vehicle.employee.photo}`} 
+              alt="Owner" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+            />
+          ) : (
+            <span style={{ fontSize: '1.6rem' }}>👤</span>
+          )}
+        </div>
+
+        {/* Ім'я та телефон */}
+        <div>
+          <p style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: '0 0 4px 0', color: '#fff' }}>
+            {lastDetection.vehicle.owner_name}
+          </p>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px', 
+            color: '#00BFA5', 
+            fontSize: '0.88rem' 
+          }}>
+            <svg 
+              width="14" height="14" viewBox="0 0 24 24" fill="none" 
+              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            >
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l2.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            <span style={{ fontWeight: '600', letterSpacing: '0.3px' }}>
+              {lastDetection.vehicle.employee?.phone || lastDetection.vehicle.owner_phone || "Не вказано"}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <p style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: '5px 0', color: '#fff' }}>
-        {/* Використовуємо owner_name, яке ми налаштували в серіалайзері */}
-        {lastDetection.vehicle.owner_name}
-      </p>
-
-      {/* Стилізований блок телефону */}
-      <div style={{ 
-  display: 'flex', 
-  justifyContent: 'center', 
-  alignItems: 'center', 
-  gap: '10px', 
-  color: '#00BFA5', 
-  fontSize: '0.95rem', 
-  margin: '10px 0' 
-}}>
-  {/* SVG іконка телефону, яка точно слухає CSS color */}
-  <svg 
-    width="16" 
-    height="16" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2.5" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
-  >
-    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l2.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-  </svg>
-  
-  <span style={{ fontWeight: '600', letterSpacing: '0.5px' }}>
-    {lastDetection.vehicle.employee?.phone || lastDetection.vehicle.owner_phone || "Не вказано"}
-  </span>
-</div>
-
-      <p style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.85rem', marginTop: '10px' }}>
+      <p style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.82rem', margin: '8px 0' }}>
         ● ДОСТУП ДОЗВОЛЕНО
       </p>
 
-      <hr style={{ borderColor: 'rgba(51, 65, 85, 0.5)', margin: '15px 0' }} />
+      <hr style={{ borderColor: 'rgba(51, 65, 85, 0.5)', margin: '12px 0' }} />
 
-      <div style={{ textAlign: 'left', fontSize: '0.85rem', color: '#94a3b8', padding: '0 10px' }}>
+      <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
         <p style={{ marginBottom: '4px' }}>
           <strong>Посада:</strong> {lastDetection.vehicle.employee?.position || "Відвідувач"}
         </p>
-        <p>
+        <p style={{ margin: 0 }}>
           <strong>Авто:</strong> {lastDetection.vehicle.brand_model || "Зареєстровано"}
         </p>
       </div>
     </div>
   ) : (
-    <div style={{ marginTop: '30px' }}>
+    <div style={{ marginTop: '20px', textAlign: 'center' }}>
       <div className="plate-badge" style={{ 
         margin: '0 auto 10px', 
         background: '#334155', 

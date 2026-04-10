@@ -2,9 +2,12 @@
 gateplate-backend/.venv/
 gateplate-backend/*.py[cod]
 gateplate-backend/db.sqlite3
-gateplate-backend/media/detections/
-__pycache__/
+gateplate-backend/videos/detections/
+**/__pycache__/
+*.pyc
 .coverage
+htmlcov/
+
 
 # --- GatePlate Frontend (React) ---
 gateplate-frontend/node_modules/
