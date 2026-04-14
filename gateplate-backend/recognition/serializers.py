@@ -2,7 +2,13 @@ from django.contrib.auth.models import Group, User
 
 from rest_framework import serializers
 
-from .models import Department, DetectedPlate, Employee, UserProfile, Vehicle
+from .models import Camera, Department, DetectedPlate, Employee, UserProfile, Vehicle
+
+
+class CameraSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Camera
+        fields = ["id", "name", "stream_url", "location", "is_active"]
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
@@ -30,6 +36,7 @@ class DepartmentSerializer(serializers.ModelSerializer):
 class VehicleSerializer(serializers.ModelSerializer):
     # Використовуємо безпечний метод замість ReadOnlyField
     owner_name = serializers.SerializerMethodField()
+    created_by_username = serializers.SerializerMethodField()
 
     # Якщо фронтенду потрібні деталі про працівника (опціонально)
     employee_details = EmployeeSerializer(source="employee", read_only=True)
@@ -45,6 +52,11 @@ class VehicleSerializer(serializers.ModelSerializer):
             return f"{obj.employee.last_name} {obj.employee.first_name}"
         # Якщо це авто гостя
         return f"{obj.owner_last_name} {obj.owner_first_name}"
+
+    def get_created_by_username(self, obj):
+        if obj.created_by:
+            return obj.created_by.username
+        return None
 
     def validate_plate_text(self, value):
         return value.upper().strip()

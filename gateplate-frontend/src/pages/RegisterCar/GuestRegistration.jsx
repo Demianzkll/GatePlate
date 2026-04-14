@@ -6,7 +6,6 @@ import './GuestRegistration.css';
 
 const GuestRegistration = () => {
     const [plate, setPlate] = useState('');
-    const [brand, setBrand] = useState('');
     const [status, setStatus] = useState({ type: '', message: '' });
     const navigate = useNavigate();
 
@@ -17,7 +16,7 @@ const GuestRegistration = () => {
         try {
             await axios.post('http://127.0.0.1:8000/api/guest/register/', {
                 plate_text: plate.toUpperCase().replace(/\s/g, ''),
-                brand_model: brand || "Гість (Self-reg)"
+                brand_model: "Гість (Self-reg)"
             });
 
             setStatus({ 
@@ -25,7 +24,6 @@ const GuestRegistration = () => {
                 message: 'Авто успішно зареєстровано! Проїзд дозволено.' 
             });
             setPlate('');
-            setBrand('');
         } catch (err) {
             setStatus({ 
                 type: 'error', 
@@ -96,15 +94,6 @@ const GuestRegistration = () => {
                                 />
                             </div>
 
-                            <div className="input-group">
-                                <label>Марка / Модель</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Наприклад: Tesla Model 3"
-                                    value={brand}
-                                    onChange={(e) => setBrand(e.target.value)}
-                                />
-                            </div>
 
                             <button type="submit" className="guest-submit-btn">
                                 Активувати доступ

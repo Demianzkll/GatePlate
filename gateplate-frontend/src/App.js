@@ -8,7 +8,8 @@ import Vehicles from './pages/Cars/Vehicles';
 import Login from './pages/Login/Login';
 import Signup from './pages/Login/Signup'; 
 import GuestRegistration from './pages/RegisterCar/GuestRegistration';
-import PhotoRecognition from './pages/PhotoRecognition/PhotoRecognition'; 
+import PhotoRecognition from './pages/PhotoRecognition/PhotoRecognition';
+import Guests from './pages/Guests/Guests'; 
 import { DataProvider } from './DataContext';
 import Footer from './components/Footer';
 
@@ -64,6 +65,7 @@ function App() {
                     <NavLink to="/archive" className="nav-item">Архів</NavLink>
                     {isAdmin && <NavLink to="/employees" className="nav-item">Працівники</NavLink>}
                     <NavLink to="/vehicles" className="nav-item">Автомобілі</NavLink>
+                    <NavLink to="/guests" className="nav-item">Гості</NavLink>
                   </>
                 ) : (
                   <>
@@ -91,6 +93,7 @@ function App() {
                     <Route path="/archive" element={<Archive />} />
                     {/* Сторінка авто однакова для обох, але всередині Vehicles ми зробимо перевірку на роль */}
                     <Route path="/vehicles" element={<Vehicles isAdmin={isAdmin} />} />
+                    <Route path="/guests" element={<Guests />} />
                   </>
                 )}
 

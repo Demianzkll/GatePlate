@@ -1,6 +1,9 @@
+import os
 import threading
 import time
 from datetime import timedelta
+
+import psutil
 
 from django.contrib.auth.models import User
 
@@ -25,6 +28,7 @@ from .models import (
     Vehicle,
 )
 from .serializers import (
+    CameraSerializer,
     DepartmentSerializer,
     DetectedPlateSerializer,
     EmployeeSerializer,
@@ -36,6 +40,11 @@ from .serializers import (
 active_analyzers = {}
 live_previews = {}
 temp_best_frames = {}
+
+# Глобальна конфігурація
+engine_config = {
+    "frame_step": 10,
+}
 
 
 class CustomAuthToken(ObtainAuthToken):
@@ -109,6 +118,7 @@ class AnalysisStartView(APIView):
                 video_name=video_name,
                 live_dict=live_previews,
                 cache_dict=temp_best_frames,
+                frame_step=engine_config["frame_step"],
             )
             thread = threading.Thread(target=engine.run)
             thread.daemon = True
@@ -267,6 +277,17 @@ class GuestVehicleCreateView(generics.CreateAPIView):
         )
 
 
+class GuestVehicleListView(APIView):
+    """Список гостьових авто (employee=null) — для адмінів/операторів"""
+
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        guests = Vehicle.objects.filter(employee__isnull=True).order_by("-id")
+        serializer = VehicleSerializer(guests, many=True)
+        return Response(serializer.data)
+
+
 class VehicleStatusUpdateView(APIView):
     permission_classes = [IsStaffUser]
 
@@ -363,3 +384,83 @@ class PhotoRecognitionAPIView(APIView):
             )
 
         return Response(analysis)
+
+
+class CameraViewSet(viewsets.ModelViewSet):
+    """CRUD для камер / відеопотоків"""
+
+    queryset = Camera.objects.all().order_by("-id")
+    serializer_class = CameraSerializer
+    permission_classes = [IsStaffUser]
+
+
+class SystemStatusView(APIView):
+    """Статус системи: CPU, RAM, диск, активні аналізатори, БД"""
+
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        # Системні метрики
+        cpu_percent = psutil.cpu_percent(interval=0.5)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage("/")
+
+        # Метрики додатку
+        active_count = len(active_analyzers)
+        total_detections = DetectedPlate.objects.count()
+        total_vehicles = Vehicle.objects.count()
+        total_employees = Employee.objects.count()
+        total_cameras = Camera.objects.filter(is_active=True).count()
+        total_users = User.objects.count()
+
+        # Розрахунок навантаження (зважений індекс)
+        thread_load = min(active_count * 25, 100)  # кожен потік ~25%
+        load_index = int(cpu_percent * 0.5 + memory.percent * 0.3 + thread_load * 0.2)
+        load_index = min(load_index, 100)
+
+        return Response(
+            {
+                "cpu_percent": cpu_percent,
+                "memory_total_gb": round(memory.total / (1024**3), 1),
+                "memory_used_gb": round(memory.used / (1024**3), 1),
+                "memory_percent": memory.percent,
+                "disk_total_gb": round(disk.total / (1024**3), 1),
+                "disk_used_gb": round(disk.used / (1024**3), 1),
+                "disk_percent": round(disk.percent, 1),
+                "active_analyzers": active_count,
+                "active_analyzer_names": list(active_analyzers.keys()),
+                "load_index": load_index,
+                "total_detections": total_detections,
+                "total_vehicles": total_vehicles,
+                "total_employees": total_employees,
+                "total_cameras": total_cameras,
+                "total_users": total_users,
+                "frame_step": engine_config["frame_step"],
+            }
+        )
+
+
+class FrameStepConfigView(APIView):
+    """GET/POST для зміни frame_step (кількість кадрів між аналізами)"""
+
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        return Response({"frame_step": engine_config["frame_step"]})
+
+    def post(self, request):
+        value = request.data.get("frame_step")
+        try:
+            value = int(value)
+            if value < 1 or value > 100:
+                return Response(
+                    {"error": "Значення повинно бути від 1 до 100"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            engine_config["frame_step"] = value
+            return Response({"frame_step": value, "status": "updated"})
+        except (TypeError, ValueError):
+            return Response(
+                {"error": "Невірне значення"}, status=status.HTTP_400_BAD_REQUEST
+            )
+

@@ -168,7 +168,7 @@ class PlateRecognizer:
 
 class VisionEngine:
     def __init__(
-        self, video_name=None, live_dict=None, cache_dict=None, model_name="best.pt"
+        self, video_name=None, live_dict=None, cache_dict=None, model_name="best.pt", frame_step=10
     ):
         self.video_name = video_name
         self.live_dict = live_dict
@@ -179,7 +179,7 @@ class VisionEngine:
 
         self.recognizer = PlateRecognizer(self.model)
 
-        self.frame_step = 10
+        self.frame_step = frame_step
         self.best_results = {}
 
     def analyze_single_photo(self, image_file, save_to_archive=True):
