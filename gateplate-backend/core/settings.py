@@ -3,6 +3,16 @@ import os
 from pathlib import Path
 
 import pytesseract
+from dotenv import load_dotenv
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env file
+load_dotenv(BASE_DIR / ".env")
+WAYFORPAY_ACCOUNT = os.getenv('WFP_MERCHANT_ACCOUNT')
+WAYFORPAY_SECRET_KEY = os.getenv('WFP_MERCHANT_SECRET_KEY')
+WAYFORPAY_DOMAIN = os.getenv('WFP_DOMAIN')
 
 mimetypes.add_type("video/mp4", ".mp4", True)
 
@@ -20,20 +30,19 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-%^!vunz_mwt3@*gmp4^(e1-xg!yh&fjn!w8+d73^9uo8oxhdyn"
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "django-insecure-fallback-key-change-me",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
 
 # Application definition
@@ -62,10 +71,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+CORS_ALLOWED_ORIGINS = os.environ.get(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000",
+).split(",")
 
 CORS_ALLOW_HEADERS = [
     "accept",
@@ -140,8 +149,9 @@ STATIC_URL = "static/"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "videos")
 
-pytesseract.pytesseract.tesseract_cmd = (
-    r"C:\Users\Demian\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+pytesseract.pytesseract.tesseract_cmd = os.environ.get(
+    "TESSERACT_CMD",
+    r"C:\Users\Demian\AppData\Local\Programs\Tesseract-OCR\tesseract.exe",
 )
 
 
@@ -150,12 +160,12 @@ pytesseract.pytesseract.tesseract_cmd = (
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "gateplate_db",
-        "USER": "root",
-        "PASSWORD": "shahtar2008",
-        "HOST": "localhost",
-        "PORT": "3306",
+        "ENGINE": os.environ.get("DB_ENGINE", "django.db.backends.mysql"),
+        "NAME": os.environ.get("DB_NAME", "gateplate_db"),
+        "USER": os.environ.get("DB_USER", "root"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "3306"),
         "OPTIONS": {
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
             "charset": "utf8mb4",

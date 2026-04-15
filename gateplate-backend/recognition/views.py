@@ -2,7 +2,8 @@ import os
 import threading
 import time
 from datetime import timedelta
-
+import hmac
+import hashlib
 import psutil
 
 from django.contrib.auth.models import User
@@ -14,10 +15,12 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from scripts.vision_engine import VisionEngine
 
 from .models import (
+    PaymentTransaction,
     APIKey,
     BlackList,
     Camera,
@@ -45,6 +48,117 @@ temp_best_frames = {}
 engine_config = {
     "frame_step": 10,
 }
+
+
+class WayForPayCreatePaymentAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        api_key = APIKey.objects.filter(user=user).first()
+        
+        if not api_key:
+            return Response({"error": "API Key not found"}, status=404)
+
+        merchant_account = settings.WAYFORPAY_ACCOUNT
+        merchant_key = settings.WAYFORPAY_SECRET_KEY
+        domain = settings.WAYFORPAY_DOMAIN
+        
+        # Створюємо унікальний order_id
+        order_id = f"{api_key.id}_{int(time.time())}"
+        order_date = int(time.time())
+        amount = 500
+        currency = "UAH"
+        product_name = "GatePlate 1000 Requests"
+        
+        # 1. СТВОРЮЄМО ЗАПИС ПРО ТРАНЗАКЦІЮ В БАЗІ
+        PaymentTransaction.objects.create(
+            user=user,
+            api_key=api_key,
+            order_reference=order_id,
+            amount=amount,
+            currency=currency,
+            status='pending'
+        )
+        
+        # Параметри для підпису
+        params = [
+            merchant_account, domain, order_id, order_date, 
+            amount, currency, product_name, 1, amount
+        ]
+        
+        base_string = ";".join(map(str, params))
+        signature = hmac.new(
+            merchant_key.encode('utf-8'), 
+            base_string.encode('utf-8'), 
+            hashlib.md5
+        ).hexdigest()
+
+        payment_data = {
+            "merchantAccount": merchant_account,
+            "merchantDomainName": domain,
+            "orderReference": order_id,
+            "orderDate": order_date,
+            "amount": amount,
+            "currency": currency,
+            "productName[]": [product_name],
+            "productCount[]": [1],
+            "productPrice[]": [amount],
+            "merchantSignature": signature,
+            "serviceUrl": "https://unreconcilably-unpicaresque-raul.ngrok-free.dev/api/recognition/payment/webhook/",
+        }
+
+        return Response(payment_data)
+
+class WayForPayWebhookAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        data = request.data
+        order_ref = data.get('orderReference')
+        
+        # 2. ШУКАЄМО ТРАНЗАКЦІЮ В БАЗІ
+        try:
+            transaction = PaymentTransaction.objects.get(order_reference=order_ref)
+        except PaymentTransaction.DoesNotExist:
+            return Response({"status": "error", "message": "Transaction not found"}, status=404)
+
+        # Якщо транзакція вже була успішно оброблена раніше, просто відповідаємо "accept"
+        if transaction.status == 'approved':
+            return Response({"status": "accept"})
+
+        if data.get('transactionStatus') == 'Approved':
+            try:
+                api_key = transaction.api_key
+                
+                # Нарахування лімітів
+                api_key.requests_limit += 1000
+                
+                if api_key.expires_at and api_key.expires_at > timezone.now():
+                    api_key.expires_at += timedelta(days=30)
+                else:
+                    api_key.expires_at = timezone.now() + timedelta(days=30)
+                
+                api_key.is_active = True
+                api_key.save()
+                
+                # 3. ОНОВЛЮЄМО СТАТУС ТРАНЗАКЦІЇ
+                transaction.status = 'approved'
+                transaction.save()
+                
+                return Response({"status": "accept"})
+            except Exception as e:
+                transaction.status = 'error'
+                transaction.save()
+                return Response({"status": "error"}, status=500)
+        
+        else:
+            # Оплата відхилена банком або скасована
+            transaction.status = 'declined'
+            transaction.save()
+        
+        return Response({"status": "decline"})
+
 
 
 class CustomAuthToken(ObtainAuthToken):
@@ -353,11 +467,13 @@ class PhotoRecognitionAPIView(APIView):
 
         from django.utils.timezone import now
 
-        has_active_key = APIKey.objects.filter(
+        # 1. Замість .exists() отримуємо сам об'єкт ключа
+        active_key = APIKey.objects.filter(
             user=user, is_active=True, expires_at__gt=now()
-        ).exists()
+        ).first() # Беремо перший активний ключ, якщо він є
 
-        if not is_staff and not has_active_key:
+        # 2. Перевірка лімітів (як і була)
+        if not is_staff and not active_key:
             profile, _ = UserProfile.objects.get_or_create(user=user)
             if profile.free_recognitions_used >= 1:
                 return Response(
@@ -365,13 +481,20 @@ class PhotoRecognitionAPIView(APIView):
                 )
 
         engine = VisionEngine()
-
         analysis = engine.analyze_single_photo(image_file, save_to_archive=is_staff)
 
-        if not is_staff and not has_active_key:
-            profile.free_recognitions_used += 1
-            profile.save()
+        # 3. ЛОГІКА СПИСАННЯ
+        if not is_staff:
+            if active_key:
+                # Списуємо з платного ключа
+                active_key.requests_used += 1
+                active_key.save()
+            else:
+                # Списуємо безкоштовну спробу (твій існуючий код)
+                profile.free_recognitions_used += 1
+                profile.save()
 
+        # 4. Відповідь (без змін)
         if not is_staff:
             return Response(
                 {
@@ -380,6 +503,7 @@ class PhotoRecognitionAPIView(APIView):
                     "is_known": analysis.get("is_known"),
                     "owner_name": None,
                     "owner_phone": None,
+                    "requests_left": (active_key.requests_limit - active_key.requests_used) if active_key else 0
                 }
             )
 

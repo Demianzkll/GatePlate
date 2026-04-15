@@ -15,6 +15,8 @@ from .views import (
     PhotoRecognitionAPIView,
     PlateConfirmView,
     VehicleViewSet,
+    WayForPayWebhookAPIView,
+    WayForPayCreatePaymentAPIView
 )
 
 router = DefaultRouter()
@@ -36,5 +38,7 @@ urlpatterns = [
     path("recognize-photo/", PhotoRecognitionAPIView.as_view(), name="recognize-photo"),
     path("issue-api-key/", IssueAPIKeyView.as_view(), name="issue-api-key"),
     path("guests/", GuestVehicleListView.as_view(), name="guest-list"),
+    path('payment/create/', WayForPayCreatePaymentAPIView.as_view(), name='wayforpay_create'),
+    path('payment/webhook/', WayForPayWebhookAPIView.as_view(), name='wayforpay_webhook'),
     path("", include(router.urls)),
 ]
