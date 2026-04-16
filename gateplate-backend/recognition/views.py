@@ -6,7 +6,9 @@ import hmac
 import hashlib
 import psutil
 
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.authtoken.models import Token
@@ -49,115 +51,203 @@ engine_config = {
     "frame_step": 10,
 }
 
+class WayForPayService:
+    """Сервіс для роботи з WayForPay API"""
+
+    PLAN_CONFIG = {
+        "1_month": {"price": 199, "days": 30, "label": "GatePlate API — 1 місяць"},
+        "3_months": {"price": 499, "days": 90, "label": "GatePlate API — 3 місяці"},
+        "1_year": {"price": 1499, "days": 365, "label": "GatePlate API — 1 рік"},
+    }
+
+    @staticmethod
+    def generate_signature(params_list):
+        """Генерує HMAC_MD5 підпис для WayForPay"""
+        base_string = ";".join(str(p) for p in params_list)
+        return hmac.new(
+            settings.WAYFORPAY_SECRET_KEY.encode("utf-8"),
+            base_string.encode("utf-8"),
+            hashlib.md5,
+        ).hexdigest()
+
 
 class WayForPayCreatePaymentAPIView(APIView):
+    """Створює платіж і повертає дані для WayForPay Widget"""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        user = request.user
-        api_key = APIKey.objects.filter(user=user).first()
-        
-        if not api_key:
-            return Response({"error": "API Key not found"}, status=404)
+        plan = request.data.get("plan")
+        if plan not in WayForPayService.PLAN_CONFIG:
+            return Response(
+                {"error": "Невірний тариф"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-        merchant_account = settings.WAYFORPAY_ACCOUNT
-        merchant_key = settings.WAYFORPAY_SECRET_KEY
-        domain = settings.WAYFORPAY_DOMAIN
-        
-        # Створюємо унікальний order_id
-        order_id = f"{api_key.id}_{int(time.time())}"
-        order_date = int(time.time())
-        amount = 500
+        plan_info = WayForPayService.PLAN_CONFIG[plan]
+        amount = plan_info["price"]
+        product_name = plan_info["label"]
         currency = "UAH"
-        product_name = "GatePlate 1000 Requests"
-        
-        # 1. СТВОРЮЄМО ЗАПИС ПРО ТРАНЗАКЦІЮ В БАЗІ
+
+        # Унікальний order reference
+        order_ref = f"GP_{request.user.id}_{plan}_{int(time.time())}"
+        order_date = int(time.time())
+
+        # Створюємо транзакцію (без api_key — він буде створений після оплати)
         PaymentTransaction.objects.create(
-            user=user,
-            api_key=api_key,
-            order_reference=order_id,
+            user=request.user,
+            plan=plan,
+            order_reference=order_ref,
             amount=amount,
             currency=currency,
-            status='pending'
+            status="pending",
         )
-        
-        # Параметри для підпису
-        params = [
-            merchant_account, domain, order_id, order_date, 
-            amount, currency, product_name, 1, amount
-        ]
-        
-        base_string = ";".join(map(str, params))
-        signature = hmac.new(
-            merchant_key.encode('utf-8'), 
-            base_string.encode('utf-8'), 
-            hashlib.md5
-        ).hexdigest()
+
+        # Підпис: merchantAccount;merchantDomainName;orderReference;orderDate;
+        #          amount;currency;productName;productCount;productPrice
+        signature = WayForPayService.generate_signature([
+            settings.WAYFORPAY_ACCOUNT,
+            settings.WAYFORPAY_DOMAIN,
+            order_ref,
+            str(order_date),
+            str(amount),
+            currency,
+            product_name,
+            "1",
+            str(amount),
+        ])
 
         payment_data = {
-            "merchantAccount": merchant_account,
-            "merchantDomainName": domain,
-            "orderReference": order_id,
+            "merchantAccount": settings.WAYFORPAY_ACCOUNT,
+            "merchantDomainName": settings.WAYFORPAY_DOMAIN,
+            "merchantSignature": signature,
+            "orderReference": order_ref,
             "orderDate": order_date,
             "amount": amount,
             "currency": currency,
-            "productName[]": [product_name],
-            "productCount[]": [1],
-            "productPrice[]": [amount],
-            "merchantSignature": signature,
-            "serviceUrl": "https://unreconcilably-unpicaresque-raul.ngrok-free.dev/api/recognition/payment/webhook/",
+            "productName": [product_name],
+            "productCount": [1],
+            "productPrice": [amount],
+            "serviceUrl": os.environ.get(
+                "WFP_SERVICE_URL",
+                "http://localhost:8000/api/payment/webhook/",
+            ),
+            "returnUrl": os.environ.get(
+                "WFP_RETURN_URL",
+                "http://localhost:3000/photo-recognition",
+            ),
         }
 
         return Response(payment_data)
 
+
 class WayForPayWebhookAPIView(APIView):
+    """Callback від WayForPay після оплати"""
     permission_classes = [AllowAny]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         data = request.data
-        order_ref = data.get('orderReference')
-        
-        # 2. ШУКАЄМО ТРАНЗАКЦІЮ В БАЗІ
+        order_ref = data.get("orderReference", "")
+        transaction_status = data.get("transactionStatus", "")
+
+        # Знаходимо транзакцію
         try:
             transaction = PaymentTransaction.objects.get(order_reference=order_ref)
         except PaymentTransaction.DoesNotExist:
-            return Response({"status": "error", "message": "Transaction not found"}, status=404)
+            return Response(
+                {"status": "error", "message": "Transaction not found"}, status=404
+            )
 
-        # Якщо транзакція вже була успішно оброблена раніше, просто відповідаємо "accept"
-        if transaction.status == 'approved':
-            return Response({"status": "accept"})
+        # Якщо вже оброблена — відповідаємо accept
+        if transaction.status == "approved":
+            return self._wayforpay_response(order_ref, "accept")
 
-        if data.get('transactionStatus') == 'Approved':
-            try:
-                api_key = transaction.api_key
-                
-                # Нарахування лімітів
-                api_key.requests_limit += 1000
-                
-                if api_key.expires_at and api_key.expires_at > timezone.now():
-                    api_key.expires_at += timedelta(days=30)
-                else:
-                    api_key.expires_at = timezone.now() + timedelta(days=30)
-                
-                api_key.is_active = True
-                api_key.save()
-                
-                # 3. ОНОВЛЮЄМО СТАТУС ТРАНЗАКЦІЇ
-                transaction.status = 'approved'
-                transaction.save()
-                
-                return Response({"status": "accept"})
-            except Exception as e:
-                transaction.status = 'error'
-                transaction.save()
-                return Response({"status": "error"}, status=500)
-        
-        else:
-            # Оплата відхилена банком або скасована
-            transaction.status = 'declined'
+        # Верифікуємо підпис від WayForPay
+        expected_signature = WayForPayService.generate_signature([
+            data.get("merchantAccount", ""),
+            order_ref,
+            str(data.get("amount", "")),
+            str(data.get("currency", "")),
+            str(data.get("authCode", "")),
+            str(data.get("cardPan", "")),
+            transaction_status,
+            str(data.get("reasonCode", "")),
+        ])
+
+        received_signature = data.get("merchantSignature", "")
+        if received_signature != expected_signature:
+            transaction.status = "error"
             transaction.save()
-        
-        return Response({"status": "decline"})
+            return self._wayforpay_response(order_ref, "refuse")
+
+        if transaction_status == "Approved":
+            try:
+                plan_info = WayForPayService.PLAN_CONFIG.get(transaction.plan, WayForPayService.PLAN_CONFIG["1_month"])
+
+                # Створюємо API Key
+                api_key = APIKey.objects.create(
+                    user=transaction.user,
+                    plan=transaction.plan,
+                    expires_at=timezone.now() + timedelta(days=plan_info["days"]),
+                    is_active=True,
+                )
+
+                # Оновлюємо транзакцію
+                transaction.api_key = api_key
+                transaction.status = "approved"
+                transaction.save()
+
+                return self._wayforpay_response(order_ref, "accept")
+
+            except Exception as e:
+                print(f"[PAYMENT ERROR] {e}")
+                transaction.status = "error"
+                transaction.save()
+                return self._wayforpay_response(order_ref, "refuse")
+        else:
+            transaction.status = "declined"
+            transaction.save()
+            return self._wayforpay_response(order_ref, "refuse")
+
+    @staticmethod
+    def _wayforpay_response(order_ref, resp_status):
+        """Формує відповідь у форматі, який очікує WayForPay"""
+        resp_time = int(time.time())
+        signature = WayForPayService.generate_signature([order_ref, resp_status, str(resp_time)])
+        return Response({
+            "orderReference": order_ref,
+            "status": resp_status,
+            "time": resp_time,
+            "signature": signature,
+        })
+
+
+class PaymentStatusAPIView(APIView):
+    """Перевірка статусу оплати (фронтенд polling)"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        order_ref = request.query_params.get("order", "")
+        if not order_ref:
+            return Response(
+                {"error": "order parameter required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            transaction = PaymentTransaction.objects.get(
+                order_reference=order_ref, user=request.user
+            )
+        except PaymentTransaction.DoesNotExist:
+            return Response({"error": "Not found"}, status=404)
+
+        result = {
+            "status": transaction.status,
+            "plan": transaction.plan,
+        }
+
+        if transaction.status == "approved" and transaction.api_key:
+            result["api_key"] = str(transaction.api_key.key)
+            result["expires_at"] = transaction.api_key.expires_at.isoformat()
+
+        return Response(result)
 
 
 

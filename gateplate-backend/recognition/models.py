@@ -202,14 +202,32 @@ class PaymentTransaction(models.Model):
         ('error', 'Помилка'),
     ]
 
+    PLAN_CHOICES = [
+        ("1_month", "1 місяць"),
+        ("3_months", "3 місяці"),
+        ("1_year", "1 рік"),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
-    api_key = models.ForeignKey('APIKey', on_delete=models.CASCADE)
-    order_reference = models.CharField(max_length=100, unique=True) # Наш order_id
+    api_key = models.ForeignKey(
+        'APIKey', on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="Виданий API-ключ"
+    )
+    plan = models.CharField(
+        max_length=20, choices=PLAN_CHOICES, default="1_month",
+        verbose_name="Тарифний план"
+    )
+    order_reference = models.CharField(max_length=100, unique=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=3, default='UAH')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = "Платіжна транзакція"
+        verbose_name_plural = "Платіжні транзакції"
+        ordering = ["-created_at"]
+
     def __str__(self):
-        return f"Transaction {self.order_reference} - {self.status}"
+        return f"Transaction {self.order_reference} - {self.get_status_display()}"
