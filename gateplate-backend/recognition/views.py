@@ -55,9 +55,9 @@ class WayForPayService:
     """Сервіс для роботи з WayForPay API"""
 
     PLAN_CONFIG = {
-        "1_month": {"price": 199, "days": 30, "label": "GatePlate API — 1 місяць"},
-        "3_months": {"price": 499, "days": 90, "label": "GatePlate API — 3 місяці"},
-        "1_year": {"price": 1499, "days": 365, "label": "GatePlate API — 1 рік"},
+        "1_month": {"price": 199, "days": 30, "label": "GatePlate API 1 month"},
+        "3_months": {"price": 499, "days": 90, "label": "GatePlate API 3 months"},
+        "1_year": {"price": 1499, "days": 365, "label": "GatePlate API 1 year"},
     }
 
     @staticmethod

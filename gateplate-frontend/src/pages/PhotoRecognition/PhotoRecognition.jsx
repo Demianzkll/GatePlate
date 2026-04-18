@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext } from 'react';
+import React, { useState, useRef, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { DataContext } from '../../DataContext';
 import { Upload, Camera, CheckCircle, XCircle, User, Phone, ShieldCheck, Lock, Zap, X, Key, Copy, Clock } from 'lucide-react';
@@ -24,6 +24,20 @@ const PhotoRecognition = () => {
 
     const { userRole } = useContext(DataContext);
     const isStaff = userRole === 'Administrators' || userRole === 'Operators';
+
+    useEffect(() => {
+        // Динамічно завантажуємо скрипт WayForPay
+        const script = document.createElement("script");
+        script.src = "https://secure.wayforpay.com/server/pay-widget.js";
+        script.async = true;
+        document.body.appendChild(script);
+
+        return () => {
+            if (document.body.contains(script)) {
+                document.body.removeChild(script);
+            }
+        };
+    }, []);
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
@@ -58,15 +72,81 @@ const PhotoRecognition = () => {
         }
     };
 
+    const pollPaymentStatus = async (orderRef, retries = 5) => {
+        try {
+            const token = localStorage.getItem('token');
+            const headers = token ? { 'Authorization': `Token ${token}` } : {};
+            const res = await axios.get(`http://127.0.0.1:8000/api/payment/status/?order=${orderRef}`, { headers });
+
+            if (res.data.status === 'approved' && res.data.api_key) {
+                setApiKeyResult({
+                    api_key: res.data.api_key,
+                    expires_at: res.data.expires_at
+                });
+                setPlanLoading(null);
+            } else if (retries > 0) {
+                setTimeout(() => pollPaymentStatus(orderRef, retries - 1), 2000);
+            } else {
+                alert("Оплата пройшла, але не вдалося отримати ключ. Перезавантажте сторінку.");
+                setPlanLoading(null);
+            }
+        } catch (err) {
+            if (retries > 0) {
+                setTimeout(() => pollPaymentStatus(orderRef, retries - 1), 2000);
+            } else {
+                alert("Помилка перевірки статусу.");
+                setPlanLoading(null);
+            }
+        }
+    };
+
     const handleSelectPlan = async (planId) => {
         setPlanLoading(planId);
         try {
-            const res = await axios.post('http://127.0.0.1:8000/api/issue-api-key/', { plan: planId });
-            setApiKeyResult(res.data);
+            const token = localStorage.getItem('token');
+            const headers = token ? { 'Authorization': `Token ${token}` } : {};
+
+            // 1. Отримуємо дані для підпису від бекенду
+            const res = await axios.post('http://127.0.0.1:8000/api/payment/create/', { plan: planId }, { headers });
+            const paymentData = res.data;
+
+            // 2. Ініціалізуємо віджет WayForPay
+            const wayforpay = new window.Wayforpay();
+            wayforpay.run({
+                merchantAccount: paymentData.merchantAccount,
+                merchantDomainName: paymentData.merchantDomainName,
+                authorizationType: "SimpleSignature",
+                merchantSignature: paymentData.merchantSignature,
+                orderReference: paymentData.orderReference,
+                orderDate: paymentData.orderDate,
+                amount: paymentData.amount,
+                currency: paymentData.currency,
+                productName: paymentData.productName,
+                productPrice: paymentData.productPrice,
+                productCount: paymentData.productCount,
+                serviceUrl: paymentData.serviceUrl,
+                returnUrl: paymentData.returnUrl
+            },
+            function (response) {
+                // Успішно (Approved)
+                console.log("[WFP Approved]", response);
+                pollPaymentStatus(paymentData.orderReference);
+            },
+            function (response) {
+                // Відхилено (Declined)
+                console.error("[WFP Declined Error Details]:", response);
+                alert("Оплату відхилено. Загляньте у консоль браузера (F12) для деталей.");
+                setPlanLoading(null);
+            },
+            function (response) {
+                // В очікуванні (Pending)
+                console.log("[WFP Pending]", response);
+                alert("Оплата в обробці.");
+            });
+
         } catch (err) {
             console.error(err);
-            alert("Помилка при отриманні API-ключа.");
-        } finally {
+            alert("Помилка при ініціалізації оплати.");
             setPlanLoading(null);
         }
     };
