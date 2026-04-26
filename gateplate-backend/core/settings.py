@@ -48,6 +48,7 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -58,6 +59,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "recognition",
     "rest_framework.authtoken",
+    "channels",
 ]
 
 MIDDLEWARE = [
@@ -107,6 +109,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "core.wsgi.application"
+ASGI_APPLICATION = "core.asgi.application"
+
+# Channels — in-memory layer (for production use Redis)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 
 
 # Password validation

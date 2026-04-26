@@ -10,6 +10,7 @@ import Signup from './pages/Login/Signup';
 import GuestRegistration from './pages/RegisterCar/GuestRegistration';
 import PhotoRecognition from './pages/PhotoRecognition/PhotoRecognition';
 import Guests from './pages/Guests/Guests'; 
+import SystemStatus from './pages/SystemStatus/SystemStatus';
 import { DataProvider } from './DataContext';
 import Footer from './components/Footer';
 
@@ -66,6 +67,7 @@ function App() {
                     {isAdmin && <NavLink to="/employees" className="nav-item">Працівники</NavLink>}
                     <NavLink to="/vehicles" className="nav-item">Автомобілі</NavLink>
                     <NavLink to="/guests" className="nav-item">Гості</NavLink>
+                    {isAdmin && <NavLink to="/status" className="nav-item">Монітор</NavLink>}
                   </>
                 ) : (
                   <>
@@ -94,6 +96,7 @@ function App() {
                     {/* Сторінка авто однакова для обох, але всередині Vehicles ми зробимо перевірку на роль */}
                     <Route path="/vehicles" element={<Vehicles isAdmin={isAdmin} />} />
                     <Route path="/guests" element={<Guests />} />
+                    {isAdmin && <Route path="/status" element={<SystemStatus />} />}
                   </>
                 )}
 
